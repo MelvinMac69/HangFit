@@ -223,7 +223,7 @@ function SetRow({
       </span>
       <div className="flex-1" />
       <button
-        onClick={() => { console.log('CHECK BUTTON CLICKED, set.completed =', set.completed); onComplete() }}
+        onClick={() => onComplete()}
         className={`p-2 rounded-lg transition-colors ${
           set.completed
             ? 'bg-emerald-500 text-white'
@@ -407,7 +407,6 @@ function ExerciseCard({
                 <div className="flex-1" />
                 <button
                   onClick={() => {
-                    console.log('CHECK BUTTON CLICKED, set.completed =', set.completed, 'i =', i)
                     setLocalCompleted(prev => ({ ...prev, [i]: !prev[i] }))
                     handleToggle(i)
                   }}
@@ -651,7 +650,6 @@ export default function WorkoutPage() {
 
   // Debug: log when workoutExercises changes
   useEffect(() => {
-    console.log('workoutExercises updated, checking first exercise set 0:', workoutExercises[0]?.sets[0])
   }, [workoutExercises])
   const [savedWorkoutKey, setSavedWorkoutKey] = useState<string | null>(null)
   const [workoutStarted, setWorkoutStarted] = useState(false)
@@ -940,7 +938,6 @@ export default function WorkoutPage() {
       const wasCompleted = sets[setIndex].completed
       sets[setIndex] = { ...sets[setIndex], completed: !wasCompleted }
       updated[exerciseIndex] = { ...updated[exerciseIndex], sets }
-      console.log('Toggle set:', exerciseIndex, setIndex, 'was:', wasCompleted, 'now:', !wasCompleted)
 
       // Persist to localStorage for jump-back-in
       const workoutState = {
@@ -957,10 +954,8 @@ export default function WorkoutPage() {
   }
 
   const handleSwitchExercise = (exerciseIndex: number, newName: string) => {
-    console.log('handleSwitchExercise called with exerciseIndex=', exerciseIndex, 'newName=', newName, 'workoutExercises.length=', workoutExercises.length)
     // Clear any active rest timer for this exercise
     setWorkoutExercises(prev => {
-      console.log('handleSwitchExercise prev.length=', prev.length, 'exerciseIndex=', exerciseIndex)
       if (exerciseIndex < 0 || exerciseIndex >= prev.length) {
         console.warn('handleSwitchExercise: index out of bounds', exerciseIndex)
         return prev
