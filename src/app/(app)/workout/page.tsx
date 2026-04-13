@@ -223,7 +223,7 @@ function SetRow({
       </span>
       <div className="flex-1" />
       <button
-        onClick={onComplete}
+        onClick={() => { console.log('CHECK BUTTON CLICKED, set.completed =', set.completed); onComplete() }}
         className={`p-2 rounded-lg transition-colors ${
           set.completed
             ? 'bg-emerald-500 text-white'
@@ -884,8 +884,10 @@ export default function WorkoutPage() {
       if (!prev[exerciseIndex] || !prev[exerciseIndex].sets[setIndex]) return prev
       const updated = [...prev]
       const sets = [...updated[exerciseIndex].sets]
-      sets[setIndex] = { ...sets[setIndex], completed: !sets[setIndex].completed }
+      const wasCompleted = sets[setIndex].completed
+      sets[setIndex] = { ...sets[setIndex], completed: !wasCompleted }
       updated[exerciseIndex] = { ...updated[exerciseIndex], sets }
+      console.log('Toggle set:', exerciseIndex, setIndex, 'was:', wasCompleted, 'now:', !wasCompleted)
 
       // Persist to localStorage for jump-back-in
       const workoutState = {
