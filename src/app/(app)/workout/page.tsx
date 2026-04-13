@@ -931,20 +931,19 @@ export default function WorkoutPage() {
     }
 
     try {
-      // Ensure user profile exists — try user_profiles first (what the FK references), then profiles
-      console.log('Saving workout for user:', user.id, user.email)
-      const profileData = { id: user.id, email: user.email || '' }
-      const upsertResult = await supabase
+      // Ensure user profile exists first (fixes FK constraint on workout_logs)
+      // The actual table is user_profiles with only an id column (no email)
+      console.log('Ensuring user_profiles row exists for:', user.id)
+      const { error: profileError } = await supabase
         .from('user_profiles')
-        .upsert(profileData, { onConflict: 'id', ignoreDuplicates: true })
-      if (upsertResult.error) {
-        console.log('user_profiles upsert error:', upsertResult.error)
-        // Fallback to profiles table
-        const fallbackResult = await supabase.from('profiles').upsert(profileData, { onConflict: 'id', ignoreDuplicates: true })
-        if (fallbackResult.error) console.log('profiles upsert error:', fallbackResult.error)
-      } else {
-        console.log('user_profiles upsert succeeded')
+        .upsert({ id: user.id }, { onConflict: 'id', ignoreDuplicates: true })
+      if (profileError) {
+        console.error('user_profiles upsert failed:', profileError)
+        alert('Could not create user profile: ' + profileError.message)
+        setSaving(false)
+        return
       }
+      console.log('user_profiles row ensured')
 
       // Create workout log
       console.log('About to insert workout_logs with user_id:', user.id)
@@ -1486,8 +1485,8 @@ export default function WorkoutPage() {
 
       {/* Day Preview Modal */}
       {previewDay && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowDayPreview(null)}>
-          <div className="w-full max-w-md max-h-[85vh] flex flex-col bg-[#0f1a0f] rounded-2xl border border-white/10 overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-start bg-black/70 pt-4 px-4" onClick={() => setShowDayPreview(null)}>
+          <div className="w-full max-w-md max-h-[calc(100vh-2rem)] flex flex-col bg-[#0f1a0f] rounded-2xl border border-white/10 overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-white/10 flex items-center justify-between shrink-0">
               <div>
                 <p className="text-xs text-muted-foreground">Preview</p>
