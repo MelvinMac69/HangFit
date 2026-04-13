@@ -116,8 +116,12 @@ function InlineRestTimer({ onSkip, label }: { onSkip: () => void; label?: string
   const endTimeRef = React.useRef<number>(Date.now() + REST_DURATION * 1000)
   const [remaining, setRemaining] = React.useState(REST_DURATION - 1)
 
+  // Keep a stable ref to onSkip so the effect doesn't re-run on every render
+  const onSkipRef = React.useRef(onSkip)
+  React.useEffect(() => { onSkipRef.current = onSkip }, [onSkip])
+
   React.useEffect(() => {
-    // Reset timer when component mounts (key changes per set)
+    // Reset timer when component mounts
     endTimeRef.current = Date.now() + REST_DURATION * 1000
     setRemaining(REST_DURATION)
 
@@ -126,13 +130,13 @@ function InlineRestTimer({ onSkip, label }: { onSkip: () => void; label?: string
       const left = Math.max(0, Math.ceil((endTimeRef.current - now) / 1000))
       setRemaining(left)
       if (left <= 0) {
-        onSkip()
+        onSkipRef.current()
       }
     }
     tick()
     const id = setInterval(tick, 100)
     return () => clearInterval(id)
-  }, [onSkip])
+  }, []) // empty deps — only runs on mount
 
   const progress = (remaining / REST_DURATION) * 100
 
@@ -271,7 +275,7 @@ function ExerciseCard({
   return (
     <div className={`rounded-xl border bg-card text-card-foreground overflow-hidden ${supersetLabel ? 'border-l-4 border-l-orange-500' : ''}`}>
       {supersetLabel && (
-        <div className="px-4 pt-3 pb-1">
+        <div className="px-4 pt-4 pb-1">
           <span className="text-[10px] font-bold tracking-widest text-orange-500 uppercase">
             ⟳ Superset
           </span>
@@ -306,7 +310,7 @@ function ExerciseCard({
             )}
           </div>
           {cue && (
-            <p className="text-xs text-orange-400/70 mt-1 leading-snug">{cue}</p>
+            <p className="text-xs text-orange-400 mt-1 leading-snug">{cue}</p>
           )}
           <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
             <span>{completedSets}/{sets.length} sets</span>
@@ -1277,8 +1281,9 @@ export default function WorkoutPage() {
       <div className="max-w-lg mx-auto space-y-4">
         {/* Header */}
         <div className="text-center py-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/20 mb-3">
-            <Dumbbell className="w-7 h-7 text-orange-500" />
+          <div className="mb-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="HangFit Logo" className="w-20 h-20 object-contain mx-auto" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">HangFit</h1>
           <p className="text-muted-foreground text-xs mt-0.5">where the hangar meets iron</p>
@@ -1470,18 +1475,18 @@ export default function WorkoutPage() {
               </button>
             </div>
             <div className="p-4 space-y-3 max-h-[60vh] overflow-auto">
-              {previewDay.exercises.map((ex, i) => {
-                const exData = EXERCISES[ex.id]
-                return (
+              {(() => {
+                const items = previewDay.exercises.map((ex) => (
                   <div key={ex.id} className="p-3 rounded-xl bg-white/5 border border-white/10">
                     <div className="flex items-center justify-between">
                       <p className="font-medium text-sm">{ex.name}</p>
                       <span className="text-[10px] px-2 py-0.5 rounded bg-white/5 text-muted-foreground">{ex.category}</span>
                     </div>
-                    {exData?.cue && <p className="text-xs text-orange-400/70 mt-1">{exData.cue}</p>}
+                    {EXERCISES[ex.id]?.cue && <p className="text-xs text-orange-400 mt-1">{EXERCISES[ex.id].cue}</p>}
                   </div>
-                )
-              })}
+                ))
+                return items
+              })()}
               {previewDay.mobilityBlock && previewDay.mobilityBlock.length > 0 && (
                 <div className="p-3 rounded-xl bg-cyan-500/5 border border-cyan-500/20">
                   <p className="text-xs font-semibold text-cyan-500 mb-2">Mobility</p>
