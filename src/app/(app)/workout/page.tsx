@@ -110,6 +110,57 @@ function RestTimer({
   )
 }
 
+// Inline rest timer with clock-based countdown (avoids setInterval drift)
+function InlineRestTimer({ onSkip }: { onSkip: () => void }) {
+  const REST_DURATION = 90 // seconds
+  const endTimeRef = React.useRef<number>(Date.now() + REST_DURATION * 1000)
+  const [remaining, setRemaining] = React.useState(REST_DURATION)
+
+  React.useEffect(() => {
+    const tick = () => {
+      const now = Date.now()
+      const left = Math.max(0, Math.ceil((endTimeRef.current - now) / 1000))
+      setRemaining(left)
+      if (left <= 0) {
+        onSkip()
+      }
+    }
+    // Run immediately, then every 100ms for smooth countdown
+    tick()
+    const id = setInterval(tick, 100)
+    return () => clearInterval(id)
+  }, [onSkip])
+
+  const progress = ((REST_DURATION - remaining) / REST_DURATION) * 100
+  const cx = 12, cy = 12, r = 10
+  const circ = 2 * Math.PI * r
+
+  return (
+    <div className="ml-10 mt-1 p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+      <div className="flex items-center gap-2">
+        <svg className="w-6 h-6 -rotate-90" viewBox="0 0 24 24">
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke="currentColor" strokeWidth="2" className="text-emerald-500/20" />
+          <circle
+            cx={cx} cy={cy} r={r}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            className="text-emerald-500 transition-all"
+            strokeDasharray={circ}
+            strokeDashoffset={circ * (1 - progress / 100)}
+          />
+        </svg>
+        <span className="text-xs text-emerald-400 tabular-nums">
+          {Math.floor(remaining / 60)}:{(remaining % 60).toString().padStart(2, '0')}
+        </span>
+        <div className="flex-1" />
+        <button onClick={onSkip} className="text-xs text-muted-foreground hover:text-white">Skip</button>
+      </div>
+    </div>
+  )
+}
+
 // Set Row Component
 function SetRow({
   set,
@@ -319,19 +370,12 @@ function ExerciseCard({
                 onComplete={() => handleToggle(i)}
                 targetReps={targetReps}
               />
-              {/* Inline mini rest timer after completing a set */}
+              {/* Inline rest timer with clock-based countdown */}
               {showRestForSet === i && !set.completed && (
-                <div className="mt-2 p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-emerald-400">Rest 90s</span>
-                    <button
-                      onClick={() => setShowRestForSet(null)}
-                      className="text-xs text-muted-foreground hover:text-white"
-                    >
-                      Skip
-                    </button>
-                  </div>
-                </div>
+                <InlineRestTimer
+                  key={`rest-single-${i}`}
+                  onSkip={() => setShowRestForSet(null)}
+                />
               )}
             </div>
           ))}
@@ -500,14 +544,12 @@ function SupersetCard({
                 </div>
               )}
 
-              {/* Inline rest timer — show if this specific ex/set was just completed */}
+              {/* Inline rest timer — clock-accurate countdown */}
               {showRestForSet?.set === setIndex && group.exercises[showRestForSet.ex] && (
-                <div className="ml-10 mt-1 p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-emerald-400">Rest 90s — {group.exercises[showRestForSet.ex].exerciseName.split(' ')[0]}</span>
-                    <button onClick={() => setShowRestForSet(null)} className="text-xs text-muted-foreground hover:text-white">Skip</button>
-                  </div>
-                </div>
+                <InlineRestTimer
+                  key={`rest-${showRestForSet.ex}-${setIndex}`}
+                  onSkip={() => setShowRestForSet(null)}
+                />
               )}
             </div>
           ))}
@@ -692,36 +734,28 @@ export default function WorkoutPage() {
 
   const handleUpdateSet = (exerciseIndex: number, setIndex: number, weight: number, reps: number) => {
     setWorkoutExercises(prev => {
+      if (!prev[exerciseIndex]) return prev
       const updated = [...prev]
-      if (!updated[exerciseIndex].sets[setIndex]) {
-        updated[exerciseIndex].sets[setIndex] = { id: genId(), weight, reps, completed: false }
+      const sets = [...updated[exerciseIndex].sets]
+      if (!sets[setIndex]) {
+        sets[setIndex] = { id: genId(), weight, reps, completed: false }
       } else {
-        updated[exerciseIndex].sets[setIndex] = {
-          ...updated[exerciseIndex].sets[setIndex],
-          weight,
-          reps,
-        }
+        sets[setIndex] = { ...sets[setIndex], weight, reps }
       }
+      updated[exerciseIndex] = { ...updated[exerciseIndex], sets }
       return updated
     })
   }
 
   const handleToggleSet = (exerciseIndex: number, setIndex: number) => {
     setWorkoutExercises(prev => {
+      if (!prev[exerciseIndex] || !prev[exerciseIndex].sets[setIndex]) return prev
       const updated = [...prev]
-      updated[exerciseIndex].sets[setIndex] = {
-        ...updated[exerciseIndex].sets[setIndex],
-        completed: !updated[exerciseIndex].sets[setIndex].completed,
-      }
+      const sets = [...updated[exerciseIndex].sets]
+      sets[setIndex] = { ...sets[setIndex], completed: !sets[setIndex].completed }
+      updated[exerciseIndex] = { ...updated[exerciseIndex], sets }
       return updated
     })
-
-    // Check if all sets are done, show rest timer
-    const exercise = workoutExercises[exerciseIndex]
-    const allDone = exercise.sets.every((s, i) => i === setIndex || s.completed)
-    if (allDone && exerciseIndex < workoutExercises.length - 1) {
-      setShowRestTimer(true)
-    }
   }
 
   const handleSwitchExercise = (exerciseIndex: number, newName: string) => {
