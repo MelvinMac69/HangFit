@@ -114,7 +114,7 @@ function RestTimer({
 function InlineRestTimer({ onSkip, label }: { onSkip: () => void; label?: string }) {
   const REST_DURATION = 90 // seconds
   const endTimeRef = React.useRef<number>(Date.now() + REST_DURATION * 1000)
-  const [remaining, setRemaining] = React.useState(REST_DURATION)
+  const [remaining, setRemaining] = React.useState(REST_DURATION - 1)
 
   React.useEffect(() => {
     // Reset timer when component mounts (key changes per set)
@@ -591,6 +591,7 @@ export default function WorkoutPage() {
   const [workoutElapsed, setWorkoutElapsed] = useState(0) // seconds
   const [timerRunning, setTimerRunning] = useState(false)
   const [savedWorkoutKey, setSavedWorkoutKey] = useState<string | null>(null)
+  const [workoutStarted, setWorkoutStarted] = useState(false)
   const [lastSessionWeights, setLastSessionWeights] = useState<Record<string, number>>({})
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null)
   const router = useRouter()
@@ -760,6 +761,7 @@ export default function WorkoutPage() {
         setCurrentExerciseIndex(0)
         setShowDayPicker(false)
         setSavedWorkoutKey(storageKey)
+        setWorkoutStarted(parsed.started ?? true) // they already started this workout
         return
       } catch {
         // Corrupt data, start fresh
@@ -822,6 +824,7 @@ export default function WorkoutPage() {
     setCurrentExerciseIndex(0)
     setShowDayPicker(false)
     setSavedWorkoutKey(null)
+    setWorkoutStarted(false)
   }, [supabase, user, weekType, phase])
 
   const handleSelectDay = (dayNumber: number) => {
@@ -851,6 +854,7 @@ export default function WorkoutPage() {
         workoutStartTime: workoutStartTime?.toISOString(),
         workoutNotes,
         elapsed: workoutElapsed,
+        started: workoutStarted,
       }
       localStorage.setItem(`hangfit_workout_${currentDay}_${weekType}`, JSON.stringify(workoutState))
 
@@ -859,8 +863,8 @@ export default function WorkoutPage() {
   }
 
   const handleToggleSet = (exerciseIndex: number, setIndex: number) => {
-    // Start workout timer on first set completion (warmup or working)
-    if (!timerRunning) {
+    // Start workout timer on first set completion — only if officially started
+    if (!timerRunning && workoutStarted) {
       setTimerRunning(true)
     }
 
@@ -1032,15 +1036,31 @@ export default function WorkoutPage() {
                 </p>
               )}
             </div>
-            <button
-              onClick={handleFinishWorkout}
-              disabled={saving}
-              className="px-4 py-2 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : 'Complete'}
-            </button>
+            <div className="w-9" /> {/* Spacer to balance the back button */}
           </div>
         </div>
+
+        {/* Start / Continue Button */}
+        {!workoutStarted && (
+          <div className="p-4">
+            <button
+              onClick={() => {
+                setWorkoutStarted(true)
+                // Persist started state in localStorage
+                const workoutState = {
+                  currentDay, weekType, phase, programWeek,
+                  workoutExercises, workoutStartTime: new Date().toISOString(),
+                  workoutNotes, elapsed: workoutElapsed, started: true,
+                }
+                localStorage.setItem(`hangfit_workout_${currentDay}_${weekType}`, JSON.stringify(workoutState))
+              }}
+              className="w-full py-5 rounded-xl bg-emerald-500 text-white font-bold text-lg hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2"
+            >
+              <Play className="w-6 h-6" />
+              {savedWorkoutKey ? 'Continue Workout' : 'Start Workout'}
+            </button>
+          </div>
+        )}
 
         {/* Rest Timer Overlay */}
         {showRestTimer && (
@@ -1340,6 +1360,7 @@ export default function WorkoutPage() {
                 setTimerRunning(false)
                 setWorkoutActive(true)
                 setWorkoutNotes(parsed.workoutNotes || '')
+                setWorkoutStarted(parsed.started ?? true)
               } catch {}
             }}
             className="w-full py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-semibold text-sm hover:bg-emerald-500/20 transition-colors flex items-center justify-center gap-2"
