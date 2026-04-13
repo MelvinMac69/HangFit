@@ -9,22 +9,35 @@ import { Plane } from 'lucide-react'
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
-  const { client: supabase, isLoading: supabaseLoading } = useSupabase()
+  const { client: supabase, isLoading: supabaseLoading, error: supabaseError } = useSupabase()
 
   useEffect(() => {
     if (supabaseLoading) return
-    if (!supabase) return
+
+    // Show error state if Supabase failed to init
+    if (supabaseError || !supabase) {
+      setError(supabaseError || 'Failed to connect to database')
+      setLoading(false)
+      return
+    }
 
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
-      } else {
-        setUser(user)
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          router.push('/login')
+        } else {
+          setUser(user)
+          setLoading(false)
+        }
+      } catch (err) {
+        setError('Failed to verify user')
         setLoading(false)
       }
     }
+
     getUser()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -37,7 +50,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     })
 
     return () => subscription.unsubscribe()
-  }, [supabase, supabaseLoading, router])
+  }, [supabase, supabaseLoading, supabaseError, router])
+
+  // Error state - show what went wrong
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-[#0a0f0a]">
+        <div className="text-center space-y-4 max-w-sm">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20">
+            <Plane className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-xl font-bold text-white">Connection Error</h2>
+          <p className="text-sm text-red-400">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (supabaseLoading || loading) {
     return (
