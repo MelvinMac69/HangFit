@@ -952,8 +952,10 @@ export default function WorkoutPage() {
   }
 
   const handleSwitchExercise = (exerciseIndex: number, newName: string) => {
+    console.log('handleSwitchExercise called with exerciseIndex=', exerciseIndex, 'newName=', newName, 'workoutExercises.length=', workoutExercises.length)
     // Clear any active rest timer for this exercise
     setWorkoutExercises(prev => {
+      console.log('handleSwitchExercise prev.length=', prev.length, 'exerciseIndex=', exerciseIndex)
       if (exerciseIndex < 0 || exerciseIndex >= prev.length) {
         console.warn('handleSwitchExercise: index out of bounds', exerciseIndex)
         return prev
@@ -1225,6 +1227,7 @@ export default function WorkoutPage() {
                 exerciseIdx === 0 || (day.exercises[exerciseIdx - 1] as any)?.supersetGroup !== supersetGroup
               )
 
+              console.log('Rendering exerciseIdx=', exerciseIdx, 'isSupersetStart=', !!isSupersetStart, 'exercise=', exercise?.exerciseName)
               if (isSupersetStart) {
                 // Collect all exercises in this superset group
                 const groupExercises: LocalExercise[] = []
