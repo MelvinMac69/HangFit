@@ -367,53 +367,55 @@ function ExerciseCard({
       {expanded && (
         <div className="px-4 pb-4 space-y-2">
           {sets.map((set, i) => (
-            <div key={set.id} className={`flex items-center gap-2 p-3 rounded-lg border transition-colors ${
-              set.completed 
-                ? 'bg-emerald-500/20 border-emerald-500/60' 
-                : 'bg-white/5 border-white/10'
-            }`}>
-              <span className={`text-xs font-medium w-8 ${set.completed ? 'text-emerald-400' : 'text-muted-foreground'}`}>Set {i + 1}</span>
-              <input
-                type="number"
-                inputMode="decimal"
-                value={set.weight || ''}
-                onChange={(e) => onUpdateSet(i, parseFloat(e.target.value) || 0, typeof set.reps === 'number' ? set.reps : 0)}
-                placeholder="0"
-                className={`w-20 px-3 py-2 rounded-lg border text-center font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors ${
-                  set.completed 
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-white' 
-                    : 'bg-white/5 border-white/10'
-                }`}
-              />
-              <span className={set.completed ? 'text-emerald-400' : 'text-muted-foreground'}>lbs</span>
-              <span className={set.completed ? 'text-emerald-400 mx-1' : 'text-muted-foreground mx-1'}>×</span>
-              <input
-                type="number"
-                inputMode="numeric"
-                value={set.reps || ''}
-                onChange={(e) => onUpdateSet(i, set.weight || 0, parseInt(e.target.value) || 0)}
-                placeholder={targetReps.min.toString()}
-                className={`w-16 px-3 py-2 rounded-lg border text-center font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors ${
-                  set.completed 
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-white' 
-                    : 'bg-white/5 border-white/10'
-                }`}
-              />
-              <span className={`text-xs transition-colors ${set.completed ? 'text-emerald-400' : 'text-muted-foreground'}`}>
-                ({targetReps.min}-{targetReps.max})
-              </span>
-              <div className="flex-1" />
-              <button
-                onClick={() => { console.log('CHECK BUTTON CLICKED, set.completed =', set.completed); handleToggle(i) }}
-                className={`p-2 rounded-lg transition-colors ${
-                  set.completed
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-white/10 hover:bg-white/20'
-                }`}
-              >
-                <Check className="w-5 h-5" />
-              </button>
-              {/* Inline rest timer */}
+            <div key={set.id}>
+              <div className={`flex items-center gap-2 p-3 rounded-lg border transition-colors ${
+                set.completed
+                  ? 'bg-emerald-500/20 border-emerald-500/60'
+                  : 'bg-white/5 border-white/10'
+              }`}>
+                <span className={`text-xs font-medium w-8 ${set.completed ? 'text-emerald-400' : 'text-muted-foreground'}`}>Set {i + 1}</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={set.weight || ''}
+                  onChange={(e) => onUpdateSet(i, parseFloat(e.target.value) || 0, typeof set.reps === 'number' ? set.reps : 0)}
+                  placeholder="0"
+                  className={`w-20 px-3 py-2 rounded-lg border text-center font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors ${
+                    set.completed
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-white'
+                      : 'bg-white/5 border-white/10'
+                  }`}
+                />
+                <span className={set.completed ? 'text-emerald-400' : 'text-muted-foreground'}>lbs</span>
+                <span className={set.completed ? 'text-emerald-400 mx-1' : 'text-muted-foreground mx-1'}>×</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={set.reps || ''}
+                  onChange={(e) => onUpdateSet(i, set.weight || 0, parseInt(e.target.value) || 0)}
+                  placeholder={targetReps.min.toString()}
+                  className={`w-16 px-3 py-2 rounded-lg border text-center font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors ${
+                    set.completed
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-white'
+                      : 'bg-white/5 border-white/10'
+                  }`}
+                />
+                <span className={`text-xs transition-colors ${set.completed ? 'text-emerald-400' : 'text-muted-foreground'}`}>
+                  ({targetReps.min}-{targetReps.max})
+                </span>
+                <div className="flex-1" />
+                <button
+                  onClick={() => { console.log('CHECK BUTTON CLICKED, set.completed =', set.completed); handleToggle(i) }}
+                  className={`p-2 rounded-lg transition-colors ${
+                    set.completed
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-white/10 hover:bg-white/20'
+                  }`}
+                >
+                  <Check className="w-5 h-5" />
+                </button>
+              </div>
+              {/* Inline rest timer - outside the flex row so it stacks below */}
               {showRestForSet === i && !set.completed && (
                 <InlineRestTimer
                   key={`rest-single-${i}`}
