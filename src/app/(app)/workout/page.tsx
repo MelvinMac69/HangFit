@@ -267,6 +267,7 @@ function ExerciseCard({
   const [expanded, setExpanded] = useState(true)
   const [showSubs, setShowSubs] = useState(false)
   const [showRestForSet, setShowRestForSet] = useState<number | null>(null)
+  const [localCompleted, setLocalCompleted] = useState<Record<number, boolean>>({})
   const completedSets = sets.filter(s => s.completed).length
   const totalVolume = sets.reduce((acc, s) => acc + (s.completed ? s.weight * (typeof s.reps === 'number' ? s.reps : 0) : 0), 0)
 
@@ -405,9 +406,13 @@ function ExerciseCard({
                 </span>
                 <div className="flex-1" />
                 <button
-                  onClick={() => { console.log('CHECK BUTTON CLICKED, set.completed =', set.completed); handleToggle(i) }}
+                  onClick={() => {
+                    console.log('CHECK BUTTON CLICKED, set.completed =', set.completed, 'i =', i)
+                    setLocalCompleted(prev => ({ ...prev, [i]: !prev[i] }))
+                    handleToggle(i)
+                  }}
                   className={`p-2 rounded-lg transition-colors ${
-                    set.completed
+                    (localCompleted[i] !== undefined ? localCompleted[i] : set.completed)
                       ? 'bg-emerald-500 text-white'
                       : 'bg-white/10 hover:bg-white/20'
                   }`}
@@ -834,7 +839,7 @@ export default function WorkoutPage() {
         const { data: lastExercises } = await supabase
           .from('workout_exercises')
           .select('exercise_id, workout_sets(weight)')
-          .eq('exercise_name', day.exercises.map(ex => ex.name))
+          .in('exercise_name', day.exercises.map(ex => ex.name))
           .order('created_at', { ascending: false })
           .limit(50)
 
