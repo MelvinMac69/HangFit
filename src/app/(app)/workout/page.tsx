@@ -186,31 +186,39 @@ function SetRow({
   }
 
   return (
-    <div className={`flex items-center gap-2 p-3 rounded-lg border ${
+    <div className={`flex items-center gap-2 p-3 rounded-lg border transition-colors ${
       set.completed 
-        ? 'bg-emerald-500/15 border-emerald-500/50' 
+        ? 'bg-emerald-500/20 border-emerald-500/60' 
         : 'bg-white/5 border-white/10'
     }`}>
-      <span className="text-xs font-medium text-muted-foreground w-8">Set {index + 1}</span>
+      <span className={`text-xs font-medium w-8 ${set.completed ? 'text-emerald-400' : 'text-muted-foreground'}`}>Set {index + 1}</span>
       <input
         type="number"
         inputMode="decimal"
         value={weight}
         onChange={(e) => handleWeightChange(e.target.value)}
         placeholder="0"
-        className="w-20 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-center font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+        className={`w-20 px-3 py-2 rounded-lg border text-center font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors ${
+          set.completed 
+            ? 'bg-emerald-500/10 border-emerald-500/30 text-white' 
+            : 'bg-white/5 border-white/10'
+        }`}
       />
-      <span className="text-muted-foreground">lbs</span>
-      <span className="text-muted-foreground mx-1">×</span>
+      <span className={set.completed ? 'text-emerald-400' : 'text-muted-foreground'}>lbs</span>
+      <span className={set.completed ? 'text-emerald-400 mx-1' : 'text-muted-foreground mx-1'}>×</span>
       <input
         type="number"
         inputMode="numeric"
         value={reps}
         onChange={(e) => handleRepsChange(e.target.value)}
         placeholder={targetReps.min.toString()}
-        className="w-16 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-center font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+        className={`w-16 px-3 py-2 rounded-lg border text-center font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors ${
+          set.completed 
+            ? 'bg-emerald-500/10 border-emerald-500/30 text-white' 
+            : 'bg-white/5 border-white/10'
+        }`}
       />
-      <span className="text-muted-foreground text-xs">
+      <span className={`text-xs transition-colors ${set.completed ? 'text-emerald-400' : 'text-muted-foreground'}`}>
         ({targetReps.min}-{targetReps.max})
       </span>
       <div className="flex-1" />
@@ -923,13 +931,23 @@ export default function WorkoutPage() {
     }
 
     try {
-      // Ensure user profile exists first (fixes FK constraint on workout_logs)
-      await supabase.from('profiles').upsert({
-        id: user.id,
-        email: user.email || '',
-      }, { onConflict: 'id', ignoreDuplicates: true })
+      // Ensure user profile exists — try user_profiles first (what the FK references), then profiles
+      console.log('Saving workout for user:', user.id, user.email)
+      const profileData = { id: user.id, email: user.email || '' }
+      const upsertResult = await supabase
+        .from('user_profiles')
+        .upsert(profileData, { onConflict: 'id', ignoreDuplicates: true })
+      if (upsertResult.error) {
+        console.log('user_profiles upsert error:', upsertResult.error)
+        // Fallback to profiles table
+        const fallbackResult = await supabase.from('profiles').upsert(profileData, { onConflict: 'id', ignoreDuplicates: true })
+        if (fallbackResult.error) console.log('profiles upsert error:', fallbackResult.error)
+      } else {
+        console.log('user_profiles upsert succeeded')
+      }
 
       // Create workout log
+      console.log('About to insert workout_logs with user_id:', user.id)
       const { data: log, error: logError } = await supabase
         .from('workout_logs')
         .insert({
@@ -1468,9 +1486,9 @@ export default function WorkoutPage() {
 
       {/* Day Preview Modal */}
       {previewDay && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 pt-8 sm:pt-0" onClick={() => setShowDayPreview(null)}>
-          <div className="w-full max-w-md bg-[#0f1a0f] rounded-2xl border border-white/10 overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-white/10 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowDayPreview(null)}>
+          <div className="w-full max-w-md max-h-[85vh] flex flex-col bg-[#0f1a0f] rounded-2xl border border-white/10 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-white/10 flex items-center justify-between shrink-0">
               <div>
                 <p className="text-xs text-muted-foreground">Preview</p>
                 <h3 className="font-bold text-lg">{previewDay.label}</h3>
@@ -1480,7 +1498,7 @@ export default function WorkoutPage() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-4 space-y-3 max-h-[60vh] overflow-auto">
+            <div className="p-4 space-y-3 overflow-auto flex-1">
               {(() => {
                 const items = previewDay.exercises.map((ex) => (
                   <div key={ex.id} className="p-3 rounded-xl bg-white/5 border border-white/10">
@@ -1502,7 +1520,7 @@ export default function WorkoutPage() {
                 </div>
               )}
             </div>
-            <div className="p-4 pb-6 border-t border-white/10">
+            <div className="p-4 shrink-0 border-t border-white/10">
               <button
                 onClick={() => {
                   setCurrentDay(previewDay.dayNumber)
