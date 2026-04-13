@@ -642,6 +642,7 @@ export default function WorkoutPage() {
   const [intensityMinutes, setIntensityMinutes] = useState(0)
   const [workoutElapsed, setWorkoutElapsed] = useState(0) // seconds
   const [timerRunning, setTimerRunning] = useState(false)
+  const [renderTrigger, setRenderTrigger] = useState(0) // force re-render on set completion
 
   // Debug: log when workoutExercises changes
   useEffect(() => {
@@ -917,6 +918,8 @@ export default function WorkoutPage() {
 
       return updated
     })
+    // Force re-render to ensure UI updates
+    setRenderTrigger(f => f + 1)
   }
 
   const handleToggleSet = (exerciseIndex: number, setIndex: number) => {
