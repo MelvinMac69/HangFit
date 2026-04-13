@@ -969,8 +969,8 @@ export default function WorkoutPage() {
       // Success - redirect to history
       router.push('/history')
     } catch (err) {
-      console.error('Error saving workout:', err)
-      alert('Failed to save workout. Please try again.')
+      console.error('Error saving workout:', JSON.stringify(err, null, 2))
+      alert('Failed to save workout: ' + (err instanceof Error ? err.message : JSON.stringify(err)))
     } finally {
       setSaving(false)
     }
