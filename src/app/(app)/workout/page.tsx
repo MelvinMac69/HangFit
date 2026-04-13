@@ -367,7 +367,7 @@ function ExerciseCard({
       {expanded && (
         <div className="px-4 pb-4 space-y-2">
           {sets.map((set, i) => (
-            <div key={set.id}>
+            <div key={`${set.id}-${set.completed ? "done" : "pending"}`}>
               <div className={`flex items-center gap-2 p-3 rounded-lg border transition-colors ${
                 set.completed
                   ? 'bg-emerald-500/20 border-emerald-500/60'
@@ -1214,27 +1214,27 @@ export default function WorkoutPage() {
         <div className="flex-1 p-4 space-y-4 overflow-auto">
           {(() => {
             const elements: React.ReactNode[] = []
-            let i = 0
-            while (i < workoutExercises.length) {
-              const exercise = workoutExercises[i]
-              const progExercise = day.exercises[i] as any
+            let exerciseIdx = 0
+            while (exerciseIdx < day.exercises.length) {
+              const exercise = workoutExercises[exerciseIdx]
+              const progExercise = day.exercises[exerciseIdx] as any
               const supersetGroup = progExercise?.supersetGroup
 
               // Check if this is the start of a superset group
               const isSupersetStart = supersetGroup && (
-                i === 0 || (day.exercises[i - 1] as any)?.supersetGroup !== supersetGroup
+                exerciseIdx === 0 || (day.exercises[exerciseIdx - 1] as any)?.supersetGroup !== supersetGroup
               )
 
               if (isSupersetStart) {
                 // Collect all exercises in this superset group
                 const groupExercises: LocalExercise[] = []
-                const groupStartIndex = i
+                const groupStartIndex = exerciseIdx
                 while (
-                  i < workoutExercises.length &&
-                  (day.exercises[i] as any)?.supersetGroup === supersetGroup
+                  exerciseIdx < workoutExercises.length &&
+                  (day.exercises[exerciseIdx] as any)?.supersetGroup === supersetGroup
                 ) {
-                  groupExercises.push(workoutExercises[i])
-                  i++
+                  groupExercises.push(workoutExercises[exerciseIdx])
+                  exerciseIdx++
                 }
                 elements.push(
                   <SupersetCard
@@ -1255,8 +1255,8 @@ export default function WorkoutPage() {
                     key={exercise.exerciseId}
                     exercise={exercise}
                     sets={exercise.sets}
-                    onUpdateSet={(setIndex, weight, reps) => handleUpdateSet(i, setIndex, weight, reps)}
-                    onToggleSet={(setIndex) => handleToggleSet(i, setIndex)}
+                    onUpdateSet={(setIndex, weight, reps) => handleUpdateSet(exerciseIdx, setIndex, weight, reps)}
+                    onToggleSet={(setIndex) => handleToggleSet(exerciseIdx, setIndex)}
                     targetReps={{ min: 8, max: 12 }}
                     youtubeUrl={exData?.youtubeUrl}
                     onOpenVideo={() => {
@@ -1267,10 +1267,10 @@ export default function WorkoutPage() {
                     }}
                     cue={exData?.cue}
                     substitutions={exData?.substitutions}
-                    onSwitchExercise={(_exIdx: number, newName: string) => handleSwitchExercise(i, newName)}
+                    onSwitchExercise={(_exIdx: number, newName: string) => handleSwitchExercise(exerciseIdx, newName)}
                   />
                 )
-                i++
+                exerciseIdx++
               }
             }
             return elements
