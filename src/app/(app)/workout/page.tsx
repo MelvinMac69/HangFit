@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@/lib/supabase'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { WORKOUT_PROGRAM, getDayLabel, getDayBgColor, getDayColor, calculateProgramPosition } from '@/lib/workout-program'
+import { WORKOUT_PROGRAM, getDayLabel, getDayBgColor, getDayColor, calculateProgramPosition, getTargetReps } from '@/lib/workout-program'
 import { EXERCISES } from '@/lib/program-data'
 import { PHASE_LABELS, PHASE_COLORS } from '@/types/workout'
 import type { PhaseKey } from '@/types/workout'
@@ -36,7 +36,7 @@ const genId = () => Math.random().toString(36).substring(2, 15)
 import { 
   ChevronRight, Check, Play, Pause, RotateCcw, Clock, Dumbbell,
   Flame, ArrowLeft, Save, X, Plus, Minus, Timer, Target, Calendar,
-  TrendingUp, Info, Link2, History
+  TrendingUp, Info, Link2, History, Zap
 } from 'lucide-react'
 
 
@@ -110,13 +110,17 @@ function RestTimer({
   )
 }
 
-// Inline rest timer with clock-based countdown (avoids setInterval drift)
-function InlineRestTimer({ onSkip }: { onSkip: () => void }) {
+// Inline rest timer — full-width horizontal bar with clock-based countdown
+function InlineRestTimer({ onSkip, label }: { onSkip: () => void; label?: string }) {
   const REST_DURATION = 90 // seconds
   const endTimeRef = React.useRef<number>(Date.now() + REST_DURATION * 1000)
   const [remaining, setRemaining] = React.useState(REST_DURATION)
 
   React.useEffect(() => {
+    // Reset timer when component mounts (key changes per set)
+    endTimeRef.current = Date.now() + REST_DURATION * 1000
+    setRemaining(REST_DURATION)
+
     const tick = () => {
       const now = Date.now()
       const left = Math.max(0, Math.ceil((endTimeRef.current - now) / 1000))
@@ -125,37 +129,26 @@ function InlineRestTimer({ onSkip }: { onSkip: () => void }) {
         onSkip()
       }
     }
-    // Run immediately, then every 100ms for smooth countdown
     tick()
     const id = setInterval(tick, 100)
     return () => clearInterval(id)
   }, [onSkip])
 
-  const progress = ((REST_DURATION - remaining) / REST_DURATION) * 100
-  const cx = 12, cy = 12, r = 10
-  const circ = 2 * Math.PI * r
+  const progress = (remaining / REST_DURATION) * 100
 
   return (
-    <div className="ml-10 mt-1 p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
-      <div className="flex items-center gap-2">
-        <svg className="w-6 h-6 -rotate-90" viewBox="0 0 24 24">
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="currentColor" strokeWidth="2" className="text-emerald-500/20" />
-          <circle
-            cx={cx} cy={cy} r={r}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            className="text-emerald-500 transition-all"
-            strokeDasharray={circ}
-            strokeDashoffset={circ * (1 - progress / 100)}
-          />
-        </svg>
-        <span className="text-xs text-emerald-400 tabular-nums">
-          {Math.floor(remaining / 60)}:{(remaining % 60).toString().padStart(2, '0')}
+    <div className="mt-1 px-1">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[10px] text-emerald-400 font-medium">
+          {label || 'Rest'} {Math.floor(remaining / 60)}:{(remaining % 60).toString().padStart(2, '0')}
         </span>
-        <div className="flex-1" />
-        <button onClick={onSkip} className="text-xs text-muted-foreground hover:text-white">Skip</button>
+        <button onClick={onSkip} className="text-[10px] text-muted-foreground hover:text-white">Skip ✕</button>
+      </div>
+      <div className="h-2 bg-emerald-500/10 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-emerald-500 rounded-full transition-all duration-100"
+          style={{ width: `${progress}%` }}
+        />
       </div>
     </div>
   )
@@ -594,6 +587,11 @@ export default function WorkoutPage() {
   const [weekWorkouts, setWeekWorkouts] = useState(0)
   const [weekVolume, setWeekVolume] = useState(0)
   const [prevWeekVolume, setPrevWeekVolume] = useState(0)
+  const [intensityMinutes, setIntensityMinutes] = useState(0)
+  const [workoutElapsed, setWorkoutElapsed] = useState(0) // seconds
+  const [timerRunning, setTimerRunning] = useState(false)
+  const [savedWorkoutKey, setSavedWorkoutKey] = useState<string | null>(null)
+  const [lastSessionWeights, setLastSessionWeights] = useState<Record<string, number>>({})
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null)
   const router = useRouter()
 
@@ -601,6 +599,15 @@ export default function WorkoutPage() {
   useEffect(() => {
     setSupabase(createClientComponentClient())
   }, [])
+
+  // Elapsed workout timer ticker (every second while timerRunning)
+  useEffect(() => {
+    if (!timerRunning) return
+    const id = setInterval(() => {
+      setWorkoutElapsed(prev => prev + 1)
+    }, 1000)
+    return () => clearInterval(id)
+  }, [timerRunning])
 
   // Initialize user and program position
   useEffect(() => {
@@ -693,6 +700,37 @@ export default function WorkoutPage() {
           volLast = (lastWeekSets || []).reduce((acc: number, s: any) => acc + (s.weight || 0) * (typeof s.reps === 'number' ? s.reps : parseInt(s.reps || '0')), 0)
         }
         setPrevWeekVolume(volLast)
+
+        // 7-day intensity minutes (rolling 7 days from today)
+        try {
+          const today = new Date()
+          const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          const todayStr = today.toISOString().split('T')[0]
+          const { data: recentLogs } = await supabase
+            .from('workout_logs')
+            .select('duration')
+            .eq('user_id', user.id)
+            .gte('date', sevenDaysAgo)
+            .lte('date', todayStr)
+          const totalMin = (recentLogs || []).reduce((acc: number, l: any) => acc + Math.round((l.duration || 0) / 60), 0)
+          setIntensityMinutes(totalMin)
+        } catch (e2) {
+          console.error('Error fetching intensity minutes:', e2)
+        }
+
+        // Check for any saved in-progress workout (jump back in)
+        let foundKey: string | null = null
+        for (const wt of ['A', 'B'] as const) {
+          for (let d = 1; d <= 7; d++) {
+            const key = `hangfit_workout_${d}_${wt}`
+            if (localStorage.getItem(key)) {
+              foundKey = key
+              break
+            }
+          }
+          if (foundKey) break
+        }
+        if (foundKey) setSavedWorkoutKey(foundKey)
       } catch (e) {
         console.error('Error fetching stats:', e)
       }
@@ -701,31 +739,93 @@ export default function WorkoutPage() {
   }, [supabase, router])
 
   // Initialize workout when day is selected
-  const initializeWorkout = useCallback((dayNumber: number) => {
+  const initializeWorkout = useCallback(async (dayNumber: number, wt?: 'A' | 'B') => {
     const day = WORKOUT_PROGRAM.find(d => d.dayNumber === dayNumber)
     if (!day) return
+    const effectiveWt = wt ?? weekType
+    const storageKey = `hangfit_workout_${dayNumber}_${effectiveWt}`
 
-    const exercises = day.exercises.map((ex, i) => ({
-      exerciseId: ex.id,
-      exerciseName: ex.name,
-      sets: [
-        { id: genId(), weight: 0, reps: 0, completed: false },
-        { id: genId(), weight: 0, reps: 0, completed: false },
-        { id: genId(), weight: 0, reps: 0, completed: false },
-      ],
-      supersetGroup: (ex as any).supersetGroup,
-    }))
+    // Check for saved workout
+    const saved = localStorage.getItem(storageKey)
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        setWorkoutExercises(parsed.workoutExercises)
+        setWorkoutNotes(parsed.workoutNotes || '')
+        setWorkoutStartTime(parsed.workoutStartTime ? new Date(parsed.workoutStartTime) : new Date())
+        setWorkoutElapsed(parsed.elapsed || 0)
+        setTimerRunning(false)
+        setWarmUpComplete(new Array(day.warmUp.length).fill(false))
+        setWorkoutActive(true)
+        setCurrentExerciseIndex(0)
+        setShowDayPicker(false)
+        setSavedWorkoutKey(storageKey)
+        return
+      } catch {
+        // Corrupt data, start fresh
+      }
+    }
+
+    // No saved workout — fetch last session weights from Supabase
+    let lastWeights: Record<string, number> = {}
+    if (supabase && user) {
+      try {
+        // Get most recent workout for each exercise
+        const { data: lastExercises } = await supabase
+          .from('workout_exercises')
+          .select('exercise_id, workout_sets(weight)')
+          .eq('exercise_name', day.exercises.map(ex => ex.name))
+          .order('created_at', { ascending: false })
+          .limit(50)
+
+        // Group by exercise_id and take most recent weight per exercise
+        const seen = new Set<string>()
+        for (const row of (lastExercises || [])) {
+          const eid = row.exercise_id as string
+          if (seen.has(eid)) continue
+          seen.add(eid)
+          const sets = row.workout_sets as any[]
+          if (sets && sets.length > 0) {
+            const avgWeight = Math.round(sets.reduce((acc: number, s: any) => acc + (s.weight || 0), 0) / sets.length)
+            if (avgWeight > 0) lastWeights[eid] = avgWeight
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching last weights:', e)
+      }
+    }
+
+    // Build exercises with auto-filled weights and reps
+    const exercises = day.exercises.map((ex, i) => {
+      const progEx = EXERCISES[ex.id]
+      const targetReps = getTargetReps(phase, ex.category)
+      const lastWeight = lastWeights[ex.id] || 0
+      return {
+        exerciseId: ex.id,
+        exerciseName: ex.name,
+        sets: [
+          { id: genId(), weight: lastWeight, reps: targetReps.min, completed: false },
+          { id: genId(), weight: lastWeight, reps: targetReps.min, completed: false },
+          { id: genId(), weight: lastWeight, reps: targetReps.min, completed: false },
+        ],
+        supersetGroup: (ex as any).supersetGroup,
+      }
+    })
 
     setWorkoutExercises(exercises)
+    setWorkoutNotes('')
     setWarmUpComplete(new Array(day.warmUp.length).fill(false))
     setWorkoutActive(true)
     setWorkoutStartTime(new Date())
+    setWorkoutElapsed(0)
+    setTimerRunning(false)
     setCurrentExerciseIndex(0)
     setShowDayPicker(false)
-  }, [])
+    setSavedWorkoutKey(null)
+  }, [supabase, user, weekType, phase])
 
   const handleSelectDay = (dayNumber: number) => {
-    initializeWorkout(dayNumber)
+    initializeWorkout(dayNumber, weekType)
   }
 
   const handleStartWorkout = () => {
@@ -743,17 +843,44 @@ export default function WorkoutPage() {
         sets[setIndex] = { ...sets[setIndex], weight, reps }
       }
       updated[exerciseIndex] = { ...updated[exerciseIndex], sets }
+
+      // Persist to localStorage
+      const workoutState = {
+        currentDay, weekType, phase, programWeek,
+        workoutExercises: updated,
+        workoutStartTime: workoutStartTime?.toISOString(),
+        workoutNotes,
+        elapsed: workoutElapsed,
+      }
+      localStorage.setItem(`hangfit_workout_${currentDay}_${weekType}`, JSON.stringify(workoutState))
+
       return updated
     })
   }
 
   const handleToggleSet = (exerciseIndex: number, setIndex: number) => {
+    // Start workout timer on first set completion (warmup or working)
+    if (!timerRunning) {
+      setTimerRunning(true)
+    }
+
     setWorkoutExercises(prev => {
       if (!prev[exerciseIndex] || !prev[exerciseIndex].sets[setIndex]) return prev
       const updated = [...prev]
       const sets = [...updated[exerciseIndex].sets]
       sets[setIndex] = { ...sets[setIndex], completed: !sets[setIndex].completed }
       updated[exerciseIndex] = { ...updated[exerciseIndex], sets }
+
+      // Persist to localStorage for jump-back-in
+      const workoutState = {
+        currentDay, weekType, phase, programWeek,
+        workoutExercises: updated,
+        workoutStartTime: workoutStartTime?.toISOString(),
+        workoutNotes,
+        elapsed: workoutElapsed,
+      }
+      localStorage.setItem(`hangfit_workout_${currentDay}_${weekType}`, JSON.stringify(workoutState))
+
       return updated
     })
   }
@@ -775,10 +902,17 @@ export default function WorkoutPage() {
   }
 
   const handleFinishWorkout = async () => {
-    if (!user || !workoutStartTime || !supabase) return
+    if (!user || !supabase) return
 
     setSaving(true)
-    const duration = Math.floor((new Date().getTime() - workoutStartTime.getTime()) / 1000)
+    setTimerRunning(false)
+    const duration = workoutElapsed // use the tracked elapsed seconds
+
+    // Clear saved workout
+    if (savedWorkoutKey) {
+      localStorage.removeItem(savedWorkoutKey)
+      setSavedWorkoutKey(null)
+    }
 
     try {
       // Create workout log
@@ -892,13 +1026,18 @@ export default function WorkoutPage() {
             <div className="text-center">
               <p className="font-semibold">{day.label}</p>
               <p className="text-xs text-muted-foreground">Week {programWeek} • Phase {phase + 1}</p>
+              {timerRunning && (
+                <p className="text-xs text-emerald-400 font-bold tabular-nums mt-0.5">
+                  {Math.floor(workoutElapsed / 60)}:{(workoutElapsed % 60).toString().padStart(2, '0')}
+                </p>
+              )}
             </div>
             <button
               onClick={handleFinishWorkout}
               disabled={saving}
-              className="px-4 py-2 rounded-lg bg-orange-500 text-white font-semibold text-sm hover:bg-orange-600 disabled:opacity-50"
+              className="px-4 py-2 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50"
             >
-              {saving ? 'Saving...' : 'Finish'}
+              {saving ? 'Saving...' : 'Complete'}
             </button>
           </div>
         </div>
@@ -1069,6 +1208,17 @@ export default function WorkoutPage() {
               rows={3}
             />
           </div>
+
+          {/* Sticky Complete Workout button */}
+          <div className="sticky bottom-16 py-4">
+            <button
+              onClick={handleFinishWorkout}
+              disabled={saving}
+              className="w-full py-4 rounded-xl bg-emerald-500 text-white font-bold text-lg hover:bg-emerald-600 disabled:opacity-50 transition-colors"
+            >
+              {saving ? 'Saving...' : '✓ Complete Workout'}
+            </button>
+          </div>
         </div>
 
         {/* Video Modal */}
@@ -1139,7 +1289,7 @@ export default function WorkoutPage() {
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div className="p-4 rounded-xl border bg-card">
             <div className="flex items-center gap-1.5 mb-1">
               <Flame className="w-3.5 h-3.5 text-orange-500" />
@@ -1162,7 +1312,41 @@ export default function WorkoutPage() {
               </p>
             )}
           </div>
+          <div className="p-4 rounded-xl border bg-card">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Clock className="w-3.5 h-3.5 text-orange-500" />
+              <span className="text-xs text-muted-foreground">7-Day Intensity</span>
+            </div>
+            <p className="text-2xl font-bold">{intensityMinutes}<span className="text-sm font-normal text-muted-foreground"> min</span></p>
+          </div>
         </div>
+
+        {/* Jump Back In */}
+        {savedWorkoutKey && (
+          <button
+            onClick={() => {
+              try {
+                const saved = localStorage.getItem(savedWorkoutKey)
+                if (!saved) return
+                const parsed = JSON.parse(saved)
+                setCurrentDay(parsed.currentDay)
+                setWeekType(parsed.weekType)
+                setPhase(parsed.phase)
+                setProgramWeek(parsed.programWeek)
+                setWorkoutExercises(parsed.workoutExercises)
+                setWorkoutNotes(parsed.workoutNotes || '')
+                setWorkoutStartTime(parsed.workoutStartTime ? new Date(parsed.workoutStartTime) : new Date())
+                setWorkoutElapsed(parsed.elapsed || 0)
+                setTimerRunning(false)
+                setWorkoutActive(true)
+                setWorkoutNotes(parsed.workoutNotes || '')
+              } catch {}
+            }}
+            className="w-full py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-semibold text-sm hover:bg-emerald-500/20 transition-colors flex items-center justify-center gap-2"
+          >
+            <Zap className="w-4 h-4" /> Jump Back In
+          </button>
+        )}
 
         {/* Current Day Card */}
         <div className={`p-5 rounded-2xl border ${getDayBgColor(day?.type || 'rest')}`}>
@@ -1252,7 +1436,7 @@ export default function WorkoutPage() {
 
       {/* Day Preview Modal */}
       {previewDay && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-4" onClick={() => setShowDayPreview(null)}>
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 pt-8 sm:pt-0" onClick={() => setShowDayPreview(null)}>
           <div className="w-full max-w-md bg-[#0f1a0f] rounded-2xl border border-white/10 overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-white/10 flex items-center justify-between">
               <div>
@@ -1286,7 +1470,7 @@ export default function WorkoutPage() {
                 </div>
               )}
             </div>
-            <div className="p-4 border-t border-white/10">
+            <div className="p-4 pb-6 border-t border-white/10">
               <button
                 onClick={() => {
                   setCurrentDay(previewDay.dayNumber)

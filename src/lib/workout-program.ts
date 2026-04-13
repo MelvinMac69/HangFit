@@ -221,7 +221,7 @@ export function calculateProgramPosition(startDate: Date): {
 }
 
 // Phase-aware rep scheme
-export function getTargetReps(phase: 0 | 1 | 2, category: string): { min: number; max: number } {
+export function getTargetReps(phase: 0 | 1 | 2 | 3, category: string): { min: number; max: number } {
   const schemes: Record<number, Record<string, { min: number; max: number }>> = {
     0: { // Accumulation
       compound: { min: 8, max: 12 },
