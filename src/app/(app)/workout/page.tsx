@@ -1227,7 +1227,6 @@ export default function WorkoutPage() {
                 exerciseIdx === 0 || (day.exercises[exerciseIdx - 1] as any)?.supersetGroup !== supersetGroup
               )
 
-              console.log('Rendering exerciseIdx=', exerciseIdx, 'isSupersetStart=', !!isSupersetStart, 'exercise=', exercise?.exerciseName)
               if (isSupersetStart) {
                 // Collect all exercises in this superset group
                 const groupExercises: LocalExercise[] = []
