@@ -44,8 +44,12 @@ export function getSupabaseClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  if (!url || !key) {
-    throw new Error('Missing Supabase environment variables')
+  console.log('[HangFit] Supabase URL:', url ? 'SET' : 'MISSING')
+  console.log('[HangFit] Supabase Key:', key ? 'SET' : 'MISSING')
+  console.log('[HangFit] All env vars:', Object.keys(process.env).filter(k => k.startsWith('NEXT_PUBLIC')))
+
+  if (!url || !key || url === 'your-project.supabase.co') {
+    throw new Error('Missing Supabase configuration. URL=' + (url || 'EMPTY') + ' KEY=' + (key ? 'SET' : 'EMPTY'))
   }
 
   supabaseClient = createClient(url, key)
