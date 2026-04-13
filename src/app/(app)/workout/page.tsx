@@ -262,7 +262,7 @@ function ExerciseCard({
   cue?: string
   substitutions?: { name: string; why: string }[]
   supersetLabel?: string
-  onSwitchExercise?: (exerciseId: string, newName: string) => void
+  onSwitchExercise?: (exerciseIndex: number, newName: string) => void
 }) {
   const [expanded, setExpanded] = useState(true)
   const [showSubs, setShowSubs] = useState(false)
@@ -350,7 +350,7 @@ function ExerciseCard({
                 key={i}
                 onClick={() => {
                   if (onSwitchExercise) {
-                    onSwitchExercise(exercise.exerciseId, sub.name)
+                    onSwitchExercise(i, sub.name)
                     setShowSubs(false)
                   }
                 }}
@@ -949,7 +949,12 @@ export default function WorkoutPage() {
   }
 
   const handleSwitchExercise = (exerciseIndex: number, newName: string) => {
+    // Clear any active rest timer for this exercise
     setWorkoutExercises(prev => {
+      if (exerciseIndex < 0 || exerciseIndex >= prev.length) {
+        console.warn('handleSwitchExercise: index out of bounds', exerciseIndex)
+        return prev
+      }
       const updated = [...prev]
       updated[exerciseIndex] = {
         ...updated[exerciseIndex],
@@ -1259,7 +1264,7 @@ export default function WorkoutPage() {
                     }}
                     cue={exData?.cue}
                     substitutions={exData?.substitutions}
-                    onSwitchExercise={(newName) => handleSwitchExercise(i, newName)}
+                    onSwitchExercise={(_exIdx: number, newName: string) => handleSwitchExercise(i, newName)}
                   />
                 )
                 i++
