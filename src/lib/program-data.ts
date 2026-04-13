@@ -5,6 +5,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'barbell-back-squat',
     name: 'Barbell Back Squat',
     category: 'compound',
+    cue: 'Drive through mid-foot, chest up, depth at hip crease or below',
     youtubeUrl: 'https://www.youtube.com/watch?v=bEv6CCg2BC8',
     substitutions: [
       { name: 'Goblet Squat', why: 'Lighter load, great for mobility' },
@@ -16,6 +17,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'romanian-deadlift',
     name: 'Romanian Deadlift',
     category: 'compound',
+    cue: 'Hinge at hips, bar tracks legs, feel hamstrings stretch at bottom',
     youtubeUrl: 'https://www.youtube.com/watch?v=7j-2w4-P14I',
     substitutions: [
       { name: 'Dumbbell RDL', why: 'Easier setup, no bar grip issues' },
@@ -27,6 +29,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'bulgarian-split-squat',
     name: 'Bulgarian Split Squat',
     category: 'compound',
+    cue: 'Front knee tracks toes, back knee drops straight down, torso upright',
     youtubeUrl: 'https://www.youtube.com/watch?v=-4LVK1crLSw',
     substitutions: [
       { name: 'Reverse Lunge', why: 'Less balance demand' },
@@ -38,6 +41,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'walking-lunge',
     name: 'Walking Lunge (DB or KB)',
     category: 'compound',
+    cue: 'Long stride, drop straight down, push through front heel to walk',
     youtubeUrl: 'https://www.youtube.com/watch?v=eFWCn5iEbTU',
     substitutions: [
       { name: 'Reverse Lunge', why: 'Less knee stress, stationary' },
@@ -49,6 +53,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'nordic-hamstring-curl',
     name: 'Nordic Hamstring Curl',
     category: 'isolation',
+    cue: 'Lower under control with straight knees, resist the eccentric',
     youtubeUrl: 'https://www.youtube.com/watch?v=htyDuCI8cm8',
     substitutions: [
       { name: 'Seated Leg Curl', why: 'Machine option, easier to load' },
@@ -60,6 +65,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'barbell-hip-thrust',
     name: 'Barbell Hip Thrust',
     category: 'compound',
+    cue: 'Squeeze glutes at top, ribs down, chin tucked throughout',
     youtubeUrl: 'https://www.youtube.com/watch?v=xDmFkJxPzeM',
     substitutions: [
       { name: 'Glute Bridge (barbell)', why: 'Same movement, off the floor' },
@@ -71,6 +77,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'conventional-deadlift',
     name: 'Conventional Deadlift',
     category: 'compound',
+    cue: 'Bar stays close, chest proud, drive floor away on ascent',
     youtubeUrl: 'https://www.youtube.com/watch?v=op9kVnSso6Q',
     substitutions: [
       { name: 'Trap Bar Deadlift', why: 'More upright, easier on lower back' },
@@ -82,6 +89,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'snatch-grip-rdl',
     name: 'Snatch-Grip Romanian Deadlift',
     category: 'compound',
+    cue: 'Wide grip, hinge deep, keep chest open and lats engaged',
     youtubeUrl: 'https://www.youtube.com/watch?v=0ed2L2XIO9E',
     substitutions: [
       { name: 'Romanian Deadlift', why: 'Standard grip width' },
@@ -93,6 +101,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'goblet-squat',
     name: 'Goblet Squat',
     category: 'compound',
+    cue: 'Elbows between knees, sit back and down, full depth',
     youtubeUrl: 'https://www.youtube.com/watch?v=MxsFDhcyFyE',
     substitutions: [
       { name: 'Bodyweight Squat', why: 'No equipment needed' },
@@ -104,6 +113,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'weighted-pull-up',
     name: 'Weighted Pull-Up',
     category: 'calisthenics',
+    cue: 'Dead hang start, pull to collarbone, control the descent',
     youtubeUrl: 'https://www.youtube.com/watch?v=HuuyDNGrCI8',
     substitutions: [
       { name: 'Lat Pulldown', why: 'Machine, adjustable load' },
@@ -115,6 +125,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'ring-push-up',
     name: 'Ring Push-Up',
     category: 'calisthenics',
+    cue: 'Rings turned in, lower to chest, press through full extension',
     youtubeUrl: 'https://www.youtube.com/watch?v=b0xFZ2HtENM',
     substitutions: [
       { name: 'Push-Up (standard)', why: 'No equipment needed' },
@@ -126,6 +137,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'ring-dip',
     name: 'Dip (weighted if possible)',
     category: 'calisthenics',
+    cue: 'Lean forward, lower to armpits, press to lockout with rings turned in',
     youtubeUrl: 'https://www.youtube.com/watch?v=yN6Q1UI_xkE',
     substitutions: [
       { name: 'Bench Dip', why: 'Easier, bodyweight' },
@@ -137,6 +149,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'chest-supported-db-row',
     name: 'Chest-Supported Dumbbell Row',
     category: 'compound',
+    cue: 'Squeeze shoulder blade back, row to hip, control the negative',
     youtubeUrl: 'https://www.youtube.com/watch?v=RpODPuNtZS8',
     substitutions: [
       { name: 'Barbell Bent-Over Row', why: 'Heavier, compound' },
@@ -148,6 +161,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'seated-cable-row',
     name: 'Seated Cable Row',
     category: 'compound',
+    cue: 'Sit tall, pull to navel, squeeze shoulder blades together',
     youtubeUrl: 'https://www.youtube.com/watch?v=sP_4vybjVJs',
     substitutions: [
       { name: 'Chest-Supported Dumbbell Row', why: 'Free weight, DB option' },
@@ -159,6 +173,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'cable-face-pull',
     name: 'Cable Face Pull',
     category: 'isolation',
+    cue: 'Pull to ears, external rotate at top, squeeze rear delts',
     youtubeUrl: 'https://www.youtube.com/watch?v=ljgqer1ZpXg',
     substitutions: [
       { name: 'Band Face Pull', why: 'Band option, portable' },
@@ -170,6 +185,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'barbell-bench-press',
     name: 'Barbell Bench Press',
     category: 'compound',
+    cue: 'Arch and retract scapulae, lower to mid-chest, press to lockout',
     youtubeUrl: 'https://www.youtube.com/watch?v=rT7DgCr-3pg',
     substitutions: [
       { name: 'Dumbbell Bench Press', why: 'Better ROM, independent arms' },
@@ -181,6 +197,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'overhead-press',
     name: 'Overhead Press',
     category: 'compound',
+    cue: 'Brace mid-section, press in slight arc, lock out overhead',
     youtubeUrl: 'https://www.youtube.com/watch?v=_RlRDWO2jfg',
     substitutions: [
       { name: 'Dumbbell Shoulder Press', why: 'Independent arms, seated option' },
@@ -192,6 +209,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'landmine-press',
     name: 'Landmine Press',
     category: 'compound',
+    cue: 'Clean to starting position, press in arcing path, full lockout',
     youtubeUrl: 'https://www.youtube.com/shorts/gH7PDepHNck',
     substitutions: [
       { name: 'Overhead Press', why: 'Full overhead, barbell' },
@@ -203,6 +221,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'db-incline-press',
     name: 'Dumbbell Incline Press',
     category: 'compound',
+    cue: 'Upper back tight against bench, lower with control, press up and together',
     youtubeUrl: 'https://www.youtube.com/watch?v=0t6z4Q2iHQA',
     substitutions: [
       { name: 'Barbell Incline Press', why: 'Heavier load option' },
@@ -214,6 +233,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'db-hammer-curl',
     name: 'Dumbbell Hammer Curl',
     category: 'isolation',
+    cue: 'Curl with palm facing body, elbow stays tucked, full contraction at top',
     youtubeUrl: 'https://www.youtube.com/watch?v=7jqi2qWAUJk',
     substitutions: [
       { name: 'Barbell Curl', why: 'Heavier, bilateral' },
@@ -225,6 +245,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'db-lateral-raise',
     name: 'Dumbbell Lateral Raise',
     category: 'isolation',
+    cue: 'Lead with elbows, slight bend, raise to shoulder height, control descent',
     youtubeUrl: 'https://www.youtube.com/watch?v=-hyAJdSFzT4',
     substitutions: [
       { name: 'Cable Lateral Raise', why: 'Constant tension at bottom' },
@@ -236,6 +257,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'overhead-tricep-extension',
     name: 'Overhead Tricep Extension (cable)',
     category: 'isolation',
+    cue: 'Elbow stays close to head, lower behind head, press to lockout',
     youtubeUrl: 'https://www.youtube.com/watch?v=IaJWPqP-Bjo',
     substitutions: [
       { name: 'Skull Crusher (BB/EZ)', why: 'Barbell, heavy triceps' },
@@ -247,6 +269,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'box-jump',
     name: 'Box Jump (step down)',
     category: 'plyometric',
+    cue: 'Swing arms hard, land soft and quiet, step down to save knees',
     youtubeUrl: 'https://www.youtube.com/watch?v=aDZoErlL1LQ',
     substitutions: [
       { name: 'Squat Jump', why: 'No box needed' },
@@ -258,6 +281,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'broad-jump',
     name: 'Broad Jump',
     category: 'plyometric',
+    cue: 'Dip and load, extend hips fully, land soft in athletic stance',
     youtubeUrl: 'https://www.youtube.com/watch?v=96zJo3nlmHI',
     substitutions: [
       { name: 'Box Jump', why: 'Vertical power' },
@@ -269,6 +293,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'clap-push-up',
     name: 'Clap Push-Up',
     category: 'plyometric',
+    cue: 'Lower fast, explode up, clap hands before landing, reset',
     youtubeUrl: 'https://www.youtube.com/watch?v=EYwWCgM198U',
     substitutions: [
       { name: 'Explosive Push-Up', why: 'Hands leave, no clap' },
@@ -280,6 +305,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'depth-drop',
     name: 'Depth Drop',
     category: 'plyometric',
+    cue: 'Step off box, land stiff, immediately absorb and jump',
     youtubeUrl: 'https://www.youtube.com/watch?v=DZrJpNfmIHQ',
     substitutions: [
       { name: 'Box Jump', why: 'Concentric focus' },
@@ -291,6 +317,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'sprint-intervals',
     name: 'Sprint Intervals',
     category: 'conditioning',
+    cue: 'Arms pump hard, drive knees up, max effort on each repeat',
     youtubeUrl: 'https://www.youtube.com/watch?v=sWoQS_JDHoU',
     substitutions: [
       { name: 'Bike Sprint Intervals', why: 'Low impact, same effort' },
@@ -302,6 +329,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'kettlebell-swing',
     name: 'Kettlebell Swing',
     category: 'explosive',
+    cue: 'Hinge and hike, snap hips forward at apex, let KB float back',
     youtubeUrl: 'https://www.youtube.com/watch?v=jYtimecuwuw',
     substitutions: [
       { name: 'Dumbbell Swing', why: 'DB substitute' },
@@ -313,6 +341,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'farmers-carry',
     name: "Farmer's Carry",
     category: 'carry',
+    cue: 'Stand tall, squeeze grip, walk fast with short quick steps',
     youtubeUrl: 'https://www.youtube.com/watch?v=IWxerVP5eps',
     substitutions: [
       { name: 'Suitcase Carry', why: 'Single arm, anti-lateral flexion' },
@@ -324,6 +353,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'turkish-get-up',
     name: 'Turkish Get-Up',
     category: 'conditioning',
+    cue: 'Eyes on weight, sit to half-kneel, stand tall, reverse slow',
     youtubeUrl: 'https://www.youtube.com/watch?v=jFK8FOiLa_M',
     substitutions: [
       { name: 'Windmill', why: 'Similar stability, simpler' },
@@ -335,6 +365,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'devils-press',
     name: "Devil's Press (DB)",
     category: 'conditioning',
+    cue: 'Burpee, clean, thruster — breathe when you can, move nonstop',
     youtubeUrl: 'https://www.youtube.com/watch?v=Cwxmji-3k40',
     substitutions: [
       { name: 'Dumbbell Thruster', why: 'Squat to press, simpler' },
@@ -346,6 +377,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'renegade-row',
     name: 'Renegade Row',
     category: 'compound',
+    cue: 'Plank tight, row to hip, alternate with control, breathe',
     youtubeUrl: 'https://www.youtube.com/watch?v=eGhLfe0feEs',
     substitutions: [
       { name: 'Plank Row (single DB)', why: 'One arm at a time' },
@@ -357,6 +389,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'burpee-to-pull-up',
     name: 'Burpee to Pull-Up',
     category: 'conditioning',
+    cue: 'Chest and thighs touch floor, jump up and pull in one motion',
     youtubeUrl: 'https://www.youtube.com/watch?v=RWysgOhr0vM',
     substitutions: [
       { name: 'Burpee', why: 'No pull-up bar needed' },
@@ -368,6 +401,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'med-ball-overhead-slam',
     name: 'Med Ball Overhead Slam',
     category: 'explosive',
+    cue: 'Big arc overhead, slam hard into ground, use the bounce or catch',
     youtubeUrl: 'https://www.youtube.com/watch?v=gNWBGsjFeWo',
     substitutions: [
       { name: 'Ball Slam', why: 'Same but downward emphasis' },
@@ -379,6 +413,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'rotational-wall-throw',
     name: 'Rotational Wall Throw',
     category: 'conditioning',
+    cue: 'Step into throw, rotate hips, release at target wall',
     youtubeUrl: 'https://www.youtube.com/watch?v=IhIi-lDzHXw',
     substitutions: [
       { name: 'Med Ball Chest Pass', why: 'Linear, upper body' },
@@ -389,6 +424,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'front-lever-progression',
     name: 'Front Lever Progression',
     category: 'calisthenics',
+    cue: 'Retract scapulae, tuck hard, hollow body position throughout',
     youtubeUrl: 'https://www.youtube.com/watch?v=eXYCKTwK9EI',
     substitutions: [
       { name: 'Hanging Knee Raise (tucked hold)', why: 'Simpler hold, build up' },
@@ -400,6 +436,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'hollow-body-hold',
     name: 'Hollow Body Hold',
     category: 'mobility',
+    cue: 'Lower back pressed to floor, arms by ears, hold the hollow',
     youtubeUrl: 'https://www.youtube.com/watch?v=YceIIdhzDPo',
     substitutions: [
       { name: 'Dead Bug', why: 'Easier, alternating limbs' },
@@ -411,6 +448,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'hanging-knee-raise',
     name: 'Hanging Knee Raise',
     category: 'calisthenics',
+    cue: 'Hang from bar, raise knees to hip crease, lower with control',
     youtubeUrl: 'https://www.youtube.com/watch?v=RD_A-Z15ER4',
     substitutions: [
       { name: 'Hanging Leg Raise', why: 'Harder, straight legs' },
@@ -422,6 +460,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'bear-crawl',
     name: 'Bear Crawl',
     category: 'conditioning',
+    cue: 'Shoulders over hands, hips low, crawl forward alternating arms/legs',
     youtubeUrl: 'https://www.youtube.com/watch?v=vg5hegN6pk0',
     substitutions: [
       { name: 'Bear Crawl Hold', why: 'Static, no movement' },
@@ -432,6 +471,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'side-plank',
     name: 'Side Plank',
     category: 'mobility',
+    cue: 'Stack hips, extend top arm, hold the side plank line',
     youtubeUrl: 'https://www.youtube.com/watch?v=茉莉',
     substitutions: [
       { name: 'Copenhagen Plank', why: 'Adductor emphasis, harder' },
@@ -443,6 +483,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'copenhagen-plank',
     name: 'Copenhagen Plank',
     category: 'mobility',
+    cue: 'Top leg on bench, hold side plank with adductors engaged',
     substitutions: [
       { name: 'Side Plank', why: 'Easier, no bench needed' },
       { name: 'Side Plank with Hip Dip', why: 'Dynamic oblique' },
@@ -452,6 +493,7 @@ export const EXERCISES: Record<string, Exercise> = {
     id: 'single-leg-calf-raise',
     name: 'Single-Leg Calf Raise',
     category: 'isolation',
+    cue: 'Rise onto toes, pause at top, lower slow to full stretch',
     youtubeUrl: 'https://www.youtube.com/watch?v=_gEx2ijsmNM',
     substitutions: [
       { name: 'Seated Calf Raise', why: 'Soleus emphasis, machine' },

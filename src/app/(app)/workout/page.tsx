@@ -22,6 +22,7 @@ interface LocalExercise {
   exerciseName: string
   sets: LocalSet[]
   notes?: string
+  supersetGroup?: string
 }
 
 // Generate unique IDs
@@ -179,43 +180,88 @@ function ExerciseCard({
   sets,
   onUpdateSet,
   onToggleSet,
+  onCompleteSet,
   targetReps,
   youtubeUrl,
   onOpenVideo,
+  cue,
+  substitutions,
+  supersetLabel,
+  onSwitchExercise,
 }: {
   exercise: LocalExercise
   sets: LocalSet[]
   onUpdateSet: (index: number, weight: number, reps: number) => void
   onToggleSet: (index: number) => void
+  onCompleteSet?: (setIndex: number) => void
   targetReps: { min: number; max: number }
   youtubeUrl?: string
   onOpenVideo: () => void
+  cue?: string
+  substitutions?: { name: string; why: string }[]
+  supersetLabel?: string
+  onSwitchExercise?: (exerciseId: string, newName: string) => void
 }) {
   const [expanded, setExpanded] = useState(true)
+  const [showSubs, setShowSubs] = useState(false)
+  const [showRestForSet, setShowRestForSet] = useState<number | null>(null)
   const completedSets = sets.filter(s => s.completed).length
   const totalVolume = sets.reduce((acc, s) => acc + (s.completed ? s.weight * (typeof s.reps === 'number' ? s.reps : 0) : 0), 0)
 
+  const handleToggle = (setIndex: number) => {
+    onToggleSet(setIndex)
+    // Auto-show rest timer for this set after marking complete
+    const set = sets[setIndex]
+    if (!set.completed) {
+      setShowRestForSet(setIndex)
+      if (onCompleteSet) onCompleteSet(setIndex)
+    }
+  }
+
   return (
-    <div className="rounded-xl border bg-card text-card-foreground overflow-hidden">
+    <div className={`rounded-xl border bg-card text-card-foreground overflow-hidden ${supersetLabel ? 'border-l-4 border-l-orange-500' : ''}`}>
+      {supersetLabel && (
+        <div className="px-4 pt-3 pb-1">
+          <span className="text-[10px] font-bold tracking-widest text-orange-500 uppercase">
+            ⟳ Superset
+          </span>
+        </div>
+      )}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full p-4 flex items-center gap-3 text-left"
+        className="w-full px-4 pb-3 flex items-center gap-3 text-left"
       >
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-semibold truncate">{exercise.exerciseName}</h3>
             {youtubeUrl && (
               <button 
                 onClick={(e) => { e.stopPropagation(); onOpenVideo() }}
-                className="p-1.5 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500/10 text-red-400 text-xs hover:bg-red-500/20 transition-colors"
               >
-                <Play className="w-4 h-4" />
+                <Play className="w-3 h-3" /> Demo
+              </button>
+            )}
+            {substitutions && substitutions.length > 0 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowSubs(!showSubs) }}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors ${
+                  showSubs 
+                    ? 'bg-orange-500/20 text-orange-400' 
+                    : 'bg-white/5 text-muted-foreground hover:text-white'
+                }`}
+              >
+                ↔ Switch
               </button>
             )}
           </div>
+          {cue && (
+            <p className="text-xs text-orange-400/70 mt-1 leading-snug">{cue}</p>
+          )}
           <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
             <span>{completedSets}/{sets.length} sets</span>
             {totalVolume > 0 && <span>{(totalVolume / 1000).toFixed(1)}k lbs</span>}
+            <span className="text-white/30">Rest 90s</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -232,17 +278,56 @@ function ExerciseCard({
         </div>
       </button>
 
+      {/* Substitution Panel */}
+      {showSubs && substitutions && substitutions.length > 0 && (
+        <div className="px-4 pb-2">
+          <div className="p-3 rounded-lg bg-white/5 border border-white/10 space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground">Substitutions</p>
+            {substitutions.map((sub, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  if (onSwitchExercise) {
+                    onSwitchExercise(exercise.exerciseId, sub.name)
+                    setShowSubs(false)
+                  }
+                }}
+                className="w-full text-left p-2 rounded bg-white/5 hover:bg-white/10 transition-colors"
+              >
+                <p className="text-sm font-medium">{sub.name}</p>
+                <p className="text-xs text-muted-foreground">{sub.why}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {expanded && (
         <div className="px-4 pb-4 space-y-2">
           {sets.map((set, i) => (
-            <SetRow
-              key={set.id}
-              set={set}
-              index={i}
-              onUpdate={(w, r) => onUpdateSet(i, w, r)}
-              onComplete={() => onToggleSet(i)}
-              targetReps={targetReps}
-            />
+            <div key={set.id}>
+              <SetRow
+                set={set}
+                index={i}
+                onUpdate={(w, r) => onUpdateSet(i, w, r)}
+                onComplete={() => handleToggle(i)}
+                targetReps={targetReps}
+              />
+              {/* Inline mini rest timer after completing a set */}
+              {showRestForSet === i && !set.completed && (
+                <div className="mt-2 p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-emerald-400">Rest 90s</span>
+                    <button
+                      onClick={() => setShowRestForSet(null)}
+                      className="text-xs text-muted-foreground hover:text-white"
+                    >
+                      Skip
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           ))}
           <button
             onClick={() => {
@@ -321,6 +406,7 @@ export default function WorkoutPage() {
         { id: genId(), weight: 0, reps: 0, completed: false },
         { id: genId(), weight: 0, reps: 0, completed: false },
       ],
+      supersetGroup: (ex as any).supersetGroup,
     }))
 
     setWorkoutExercises(exercises)
@@ -371,6 +457,17 @@ export default function WorkoutPage() {
     if (allDone && exerciseIndex < workoutExercises.length - 1) {
       setShowRestTimer(true)
     }
+  }
+
+  const handleSwitchExercise = (exerciseIndex: number, newName: string) => {
+    setWorkoutExercises(prev => {
+      const updated = [...prev]
+      updated[exerciseIndex] = {
+        ...updated[exerciseIndex],
+        exerciseName: newName,
+      }
+      return updated
+    })
   }
 
   const handleRestComplete = () => {
@@ -577,6 +674,15 @@ export default function WorkoutPage() {
         <div className="flex-1 p-4 space-y-4 overflow-auto">
           {workoutExercises.map((exercise, exerciseIndex) => {
             const exData = EXERCISES[exercise.exerciseId]
+            const progExercise = day.exercises[exerciseIndex] as any
+            const supersetGroup = progExercise?.supersetGroup
+            
+            // Start of a superset group?
+            const isSupersetStart = supersetGroup && (
+              exerciseIndex === 0 || (day.exercises[exerciseIndex - 1] as any)?.supersetGroup !== supersetGroup
+            )
+            const supersetLabel = isSupersetStart ? supersetGroup : undefined
+
             return (
               <ExerciseCard
                 key={exercise.exerciseId}
@@ -592,6 +698,10 @@ export default function WorkoutPage() {
                     setShowVideo(true)
                   }
                 }}
+                cue={exData?.cue}
+                substitutions={exData?.substitutions}
+                supersetLabel={supersetLabel}
+                onSwitchExercise={(newName) => handleSwitchExercise(exerciseIndex, newName)}
               />
             )
           })}

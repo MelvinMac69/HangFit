@@ -41,14 +41,15 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
   {
     dayNumber: 1,
     label: 'Lower A',
+    description: 'Strength & Power: Lower Body',
     type: 'lower',
     warmUp: LOWER_WARMUP,
     exercises: [
       { id: 'barbell-back-squat', name: 'Barbell Back Squat', category: 'compound' },
       { id: 'romanian-deadlift', name: 'Romanian Deadlift', category: 'compound' },
       { id: 'bulgarian-split-squat', name: 'Bulgarian Split Squat', category: 'compound' },
-      { id: 'barbell-hip-thrust', name: 'Barbell Hip Thrust', category: 'compound' },
-      { id: 'nordic-hamstring-curl', name: 'Nordic Hamstring Curl', category: 'isolation' },
+      { id: 'barbell-hip-thrust', name: 'Barbell Hip Thrust', category: 'compound', supersetGroup: 'lower-a-1' },
+      { id: 'nordic-hamstring-curl', name: 'Nordic Hamstring Curl', category: 'isolation', supersetGroup: 'lower-a-1' },
       { id: 'single-leg-calf-raise', name: 'Single-Leg Calf Raise', category: 'isolation' },
     ],
     mobilityBlock: LOWER_MOBILITY,
@@ -57,15 +58,16 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
   {
     dayNumber: 2,
     label: 'Upper A',
+    description: 'Pull & Press: Upper Body',
     type: 'upper',
     warmUp: UPPER_WARMUP,
     exercises: [
       { id: 'weighted-pull-up', name: 'Weighted Pull-Up', category: 'calisthenics' },
       { id: 'chest-supported-db-row', name: 'Chest-Supported Dumbbell Row', category: 'compound' },
-      { id: 'ring-dip', name: 'Dip (weighted if possible)', category: 'calisthenics' },
+      { id: 'ring-dip', name: 'Dip (weighted if possible)', category: 'calisthenics', supersetGroup: 'upper-a-1' },
       { id: 'overhead-press', name: 'Overhead Press', category: 'compound' },
       { id: 'cable-face-pull', name: 'Cable Face Pull', category: 'isolation' },
-      { id: 'db-hammer-curl', name: 'Dumbbell Hammer Curl', category: 'isolation' },
+      { id: 'db-hammer-curl', name: 'Dumbbell Hammer Curl', category: 'isolation', supersetGroup: 'upper-a-1' },
     ],
     mobilityBlock: UPPER_MOBILITY,
   },
@@ -73,6 +75,7 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
   {
     dayNumber: 3,
     label: 'Sprint & Athletic A',
+    description: 'Explosive Power & Speed',
     type: 'sprint',
     warmUp: SPRINT_WARMUP,
     exercises: [
@@ -92,11 +95,12 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
   {
     dayNumber: 4,
     label: 'Upper A2 — Horizontal',
+    description: 'Horizontal Push & Pull',
     type: 'upper',
     warmUp: UPPER_WARMUP,
     exercises: [
-      { id: 'ring-push-up', name: 'Ring Push-Up', category: 'calisthenics' },
-      { id: 'seated-cable-row', name: 'Seated Cable Row', category: 'compound' },
+      { id: 'ring-push-up', name: 'Ring Push-Up', category: 'calisthenics', supersetGroup: 'upper-b2-1' },
+      { id: 'seated-cable-row', name: 'Seated Cable Row', category: 'compound', supersetGroup: 'upper-b2-1' },
       { id: 'barbell-bench-press', name: 'Barbell Bench Press', category: 'compound' },
       { id: 'db-incline-press', name: 'Dumbbell Incline Press', category: 'compound' },
       { id: 'db-lateral-raise', name: 'Dumbbell Lateral Raise', category: 'isolation' },
@@ -108,6 +112,7 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
   {
     dayNumber: 5,
     label: 'MetCon A — Density',
+    description: 'Density & Conditioning',
     type: 'metcon',
     warmUp: [
       { name: 'Easy Run / Light Cycle', detail: '2 min' },
@@ -116,12 +121,8 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
       { name: 'Push-Up', detail: '5' },
     ],
     exercises: [
-      { id: 'burpee-to-pull-up', name: 'Burpee to Pull-Up', category: 'conditioning' },
-      { id: 'devils-press', name: "Devil's Press (DB)", category: 'conditioning' },
-      { id: 'kettlebell-swing', name: 'Kettlebell Swing', category: 'explosive' },
-      { id: 'farmers-carry', name: "Farmer's Carry", category: 'carry' },
-      { id: 'renegade-row', name: 'Renegade Row', category: 'compound' },
-      { id: 'med-ball-overhead-slam', name: 'Med Ball Overhead Slam', category: 'explosive' },
+      { id: 'goblet-squat', name: 'Goblet Squat', category: 'compound', supersetGroup: 'lower-b-1' },
+      { id: 'snatch-grip-rdl', name: 'Snatch-Grip Romanian Deadlift', category: 'compound', supersetGroup: 'lower-b-1' },
     ],
     mobilityBlock: [
       { name: 'Foam Roll (full body)', detail: '5 min' },
@@ -132,6 +133,7 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
   {
     dayNumber: 6,
     label: 'Active Recovery',
+    description: 'Recovery & Mobility',
     type: 'rest',
     warmUp: [
       { name: 'Easy Walk or Light Cycle', detail: '5-10 min' },
@@ -152,6 +154,7 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
   {
     dayNumber: 7,
     label: 'Full Rest',
+    description: 'Complete Rest Day',
     type: 'rest',
     warmUp: [],
     exercises: [],
