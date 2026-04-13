@@ -1224,23 +1224,27 @@ export default function WorkoutPage() {
             let exerciseIdx = 0
             while (exerciseIdx < day.exercises.length) {
               const exercise = workoutExercises[exerciseIdx]
+              if (!exercise) {
+                exerciseIdx++
+                continue
+              }
               const progExercise = day.exercises[exerciseIdx] as any
               const supersetGroup = progExercise?.supersetGroup
 
-              // Check if this is the start of a superset group
               const isSupersetStart = supersetGroup && (
                 exerciseIdx === 0 || (day.exercises[exerciseIdx - 1] as any)?.supersetGroup !== supersetGroup
               )
 
               if (isSupersetStart) {
-                // Collect all exercises in this superset group
                 const groupExercises: LocalExercise[] = []
                 const groupStartIndex = exerciseIdx
                 while (
-                  exerciseIdx < workoutExercises.length &&
+                  exerciseIdx < day.exercises.length &&
                   (day.exercises[exerciseIdx] as any)?.supersetGroup === supersetGroup
                 ) {
-                  groupExercises.push(workoutExercises[exerciseIdx])
+                  if (workoutExercises[exerciseIdx]) {
+                    groupExercises.push(workoutExercises[exerciseIdx])
+                  }
                   exerciseIdx++
                 }
                 elements.push(
@@ -1255,15 +1259,15 @@ export default function WorkoutPage() {
                   />
                 )
               } else {
-                // Single exercise (not in a superset)
                 const exData = EXERCISES[exercise.exerciseId]
+                const thisIdx = exerciseIdx
                 elements.push(
                   <ExerciseCard
                     key={exercise.exerciseId}
                     exercise={exercise}
                     sets={exercise.sets}
-                    onUpdateSet={(setIndex, weight, reps) => handleUpdateSet(exerciseIdx, setIndex, weight, reps)}
-                    onToggleSet={(setIndex) => handleToggleSet(exerciseIdx, setIndex)}
+                    onUpdateSet={(setIndex, weight, reps) => handleUpdateSet(thisIdx, setIndex, weight, reps)}
+                    onToggleSet={(setIndex) => handleToggleSet(thisIdx, setIndex)}
                     targetReps={{ min: 8, max: 12 }}
                     youtubeUrl={exData?.youtubeUrl}
                     onOpenVideo={() => {
@@ -1274,7 +1278,7 @@ export default function WorkoutPage() {
                     }}
                     cue={exData?.cue}
                     substitutions={exData?.substitutions}
-                    onSwitchExercise={(_exIdx: number, newName: string) => handleSwitchExercise(exerciseIdx, newName)}
+                    onSwitchExercise={(_exIdx: number, newName: string) => handleSwitchExercise(thisIdx, newName)}
                   />
                 )
                 exerciseIdx++
