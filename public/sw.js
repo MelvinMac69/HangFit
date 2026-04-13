@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hangfit-v1';
+const CACHE_NAME = 'hangfit-v3';
 const urlsToCache = [
   '/',
   '/workout',
