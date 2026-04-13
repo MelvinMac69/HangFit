@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation'
 import { useSupabase } from '@/lib/supabase'
 import { WORKOUT_PROGRAM, getDayLabel } from '@/lib/workout-program'
 import { format, formatDistanceToNow } from 'date-fns'
-import { 
-  Calendar, Clock, Dumbbell, ChevronRight, ChevronDown, 
-  Weight, TrendingUp, Play, User, LogOut, Loader2, X
+import {
+  Calendar, Clock, Dumbbell, ChevronRight, ChevronDown,
+  Weight, TrendingUp, Play, User, LogOut, Loader2, X, Trash2
 } from 'lucide-react'
 
 interface WorkoutDetail {
@@ -113,6 +113,28 @@ export default function HistoryPage() {
     if (!supabase) return
     await supabase.auth.signOut()
     router.push('/login')
+  }
+
+  const handleDeleteWorkout = async (workoutId: string) => {
+    if (!supabase) return
+    const confirmed = confirm('Delete this workout? This cannot be undone.')
+    if (!confirmed) return
+
+    try {
+      // Delete workout log — cascades to exercises and sets via ON DELETE CASCADE
+      const { error } = await supabase
+        .from('workout_logs')
+        .delete()
+        .eq('id', workoutId)
+
+      if (error) throw error
+
+      // Update UI
+      setWorkouts(prev => prev.filter(w => w.id !== workoutId))
+      if (expandedWorkout === workoutId) setExpandedWorkout(null)
+    } catch (err: any) {
+      alert('Failed to delete workout: ' + err.message)
+    }
   }
 
   const totalVolume = (workout: WorkoutDetail) => {
@@ -321,6 +343,17 @@ export default function HistoryPage() {
                           </div>
                         </div>
                       ))}
+
+                      {/* Delete Button */}
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => handleDeleteWorkout(workout.id)}
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete Workout
+                        </button>
+                      </div>
 
                       {/* Notes */}
                       {workout.notes && (
