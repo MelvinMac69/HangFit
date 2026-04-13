@@ -420,7 +420,7 @@ function ExerciseCard({
                 </button>
               </div>
               {/* Inline rest timer - outside the flex row so it stacks below */}
-              {showRestForSet === i && !set.completed && (
+              {showRestForSet === i && (
                 <InlineRestTimer
                   key={`rest-single-${i}`}
                   onSkip={() => setShowRestForSet(null)}
