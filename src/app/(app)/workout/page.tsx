@@ -367,15 +367,53 @@ function ExerciseCard({
       {expanded && (
         <div className="px-4 pb-4 space-y-2">
           {sets.map((set, i) => (
-            <div key={set.id}>
-              <SetRow
-                set={set}
-                index={i}
-                onUpdate={(w, r) => onUpdateSet(i, w, r)}
-                onComplete={() => handleToggle(i)}
-                targetReps={targetReps}
+            <div key={set.id} className={`flex items-center gap-2 p-3 rounded-lg border transition-colors ${
+              set.completed 
+                ? 'bg-emerald-500/20 border-emerald-500/60' 
+                : 'bg-white/5 border-white/10'
+            }`}>
+              <span className={`text-xs font-medium w-8 ${set.completed ? 'text-emerald-400' : 'text-muted-foreground'}`}>Set {i + 1}</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                value={set.weight || ''}
+                onChange={(e) => onUpdateSet(i, parseFloat(e.target.value) || 0, typeof set.reps === 'number' ? set.reps : 0)}
+                placeholder="0"
+                className={`w-20 px-3 py-2 rounded-lg border text-center font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors ${
+                  set.completed 
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-white' 
+                    : 'bg-white/5 border-white/10'
+                }`}
               />
-              {/* Inline rest timer with clock-based countdown */}
+              <span className={set.completed ? 'text-emerald-400' : 'text-muted-foreground'}>lbs</span>
+              <span className={set.completed ? 'text-emerald-400 mx-1' : 'text-muted-foreground mx-1'}>×</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                value={set.reps || ''}
+                onChange={(e) => onUpdateSet(i, set.weight || 0, parseInt(e.target.value) || 0)}
+                placeholder={targetReps.min.toString()}
+                className={`w-16 px-3 py-2 rounded-lg border text-center font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors ${
+                  set.completed 
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-white' 
+                    : 'bg-white/5 border-white/10'
+                }`}
+              />
+              <span className={`text-xs transition-colors ${set.completed ? 'text-emerald-400' : 'text-muted-foreground'}`}>
+                ({targetReps.min}-{targetReps.max})
+              </span>
+              <div className="flex-1" />
+              <button
+                onClick={() => { console.log('CHECK BUTTON CLICKED, set.completed =', set.completed); handleToggle(i) }}
+                className={`p-2 rounded-lg transition-colors ${
+                  set.completed
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-white/10 hover:bg-white/20'
+                }`}
+              >
+                <Check className="w-5 h-5" />
+              </button>
+              {/* Inline rest timer */}
               {showRestForSet === i && !set.completed && (
                 <InlineRestTimer
                   key={`rest-single-${i}`}
@@ -602,6 +640,11 @@ export default function WorkoutPage() {
   const [intensityMinutes, setIntensityMinutes] = useState(0)
   const [workoutElapsed, setWorkoutElapsed] = useState(0) // seconds
   const [timerRunning, setTimerRunning] = useState(false)
+
+  // Debug: log when workoutExercises changes
+  useEffect(() => {
+    console.log('workoutExercises updated, checking first exercise set 0:', workoutExercises[0]?.sets[0])
+  }, [workoutExercises])
   const [savedWorkoutKey, setSavedWorkoutKey] = useState<string | null>(null)
   const [workoutStarted, setWorkoutStarted] = useState(false)
   const [lastSessionWeights, setLastSessionWeights] = useState<Record<string, number>>({})
