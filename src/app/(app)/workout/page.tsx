@@ -188,7 +188,7 @@ function SetRow({
   return (
     <div className={`flex items-center gap-2 p-3 rounded-lg border ${
       set.completed 
-        ? 'bg-emerald-500/10 border-emerald-500/30' 
+        ? 'bg-emerald-500/15 border-emerald-500/50' 
         : 'bg-white/5 border-white/10'
     }`}>
       <span className="text-xs font-medium text-muted-foreground w-8">Set {index + 1}</span>
@@ -485,7 +485,7 @@ function SupersetCard({
                             </button>
                           )}
                         </div>
-                        <div className={`flex items-center gap-1 p-1.5 rounded-lg border ${isComplete ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-white/5 border-white/10'}`}>
+                        <div className={`flex items-center gap-1 p-1.5 rounded-lg border ${isComplete ? 'bg-emerald-500/15 border-emerald-500/50' : 'bg-white/5 border-white/10'}`}>
                           <input
                             type="number"
                             inputMode="decimal"
@@ -923,6 +923,12 @@ export default function WorkoutPage() {
     }
 
     try {
+      // Ensure user profile exists first (fixes FK constraint on workout_logs)
+      await supabase.from('profiles').upsert({
+        id: user.id,
+        email: user.email || '',
+      }, { onConflict: 'id', ignoreDuplicates: true })
+
       // Create workout log
       const { data: log, error: logError } = await supabase
         .from('workout_logs')
