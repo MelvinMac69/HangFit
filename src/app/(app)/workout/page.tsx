@@ -654,8 +654,6 @@ export default function WorkoutPage() {
   const [savedWorkoutKey, setSavedWorkoutKey] = useState<string | null>(null)
   const [workoutStarted, setWorkoutStarted] = useState(false)
   const [justCompleted, setJustCompleted] = useState(false)
-  // Reset completion state when day changes
-  useEffect(() => { setJustCompleted(false) }, [currentDay])
   const [lastSessionWeights, setLastSessionWeights] = useState<Record<string, number>>({})
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null)
   const router = useRouter()
