@@ -1546,8 +1546,8 @@ export default function WorkoutPage() {
 
       {/* Day Preview Modal */}
       {previewDay && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-start bg-black/70 pt-4 px-4" onClick={() => setShowDayPreview(null)}>
-          <div className="w-full max-w-md max-h-[calc(100vh-2rem)] flex flex-col bg-[#0f1a0f] rounded-2xl border border-white/10 overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-start bg-black/70 pt-4 px-4 overflow-auto">
+          <div className="w-full max-w-md flex flex-col bg-[#0f1a0f] rounded-2xl border border-white/10 overflow-visible" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-white/10 flex items-center justify-between shrink-0">
               <div>
                 <p className="text-xs text-muted-foreground">Preview</p>
