@@ -993,7 +993,6 @@ export default function WorkoutPage() {
     try {
       // Ensure user profile exists first (fixes FK constraint on workout_logs)
       // The actual table is user_profiles with only an id column (no email)
-      console.log('Ensuring user_profiles row exists for:', user.id)
       const { error: profileError } = await supabase
         .from('user_profiles')
         .upsert({ id: user.id }, { onConflict: 'id', ignoreDuplicates: true })
@@ -1006,7 +1005,6 @@ export default function WorkoutPage() {
       console.log('user_profiles row ensured')
 
       // Create workout log
-      console.log('About to insert workout_logs with user_id:', user.id)
       const { data: log, error: logError } = await supabase
         .from('workout_logs')
         .insert({
@@ -1053,12 +1051,13 @@ export default function WorkoutPage() {
         await supabase.from('workout_sets').insert(setsToInsert)
       }
 
-      // Success — show completion state on dashboard
+      // Success — show completion state on dashboard, advance to next day
       setJustCompleted(true)
       if (savedWorkoutKey) localStorage.removeItem(savedWorkoutKey)
       setSavedWorkoutKey(null)
       setWorkoutActive(false)
       setWorkoutStarted(false)
+      setCurrentDay(prev => Math.min(prev + 1, 5))
     } catch (err) {
       console.error('Error saving workout:', JSON.stringify(err, null, 2))
       alert('Failed to save workout: ' + (err instanceof Error ? err.message : JSON.stringify(err)))
