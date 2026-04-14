@@ -685,10 +685,10 @@ export default function WorkoutPage() {
       // Calculate program position (using Jan 1, 2026 as start for demo)
       const startDate = new Date('2026-01-01')
       const pos = calculateProgramPosition(startDate)
-      setCurrentDay(pos.currentDay)
-      setWeekType(pos.weekType)
-      setPhase(pos.phase)
-      setProgramWeek(pos.programWeek)
+      setCurrentDay(1)
+      setWeekType('A')
+      setPhase(0)
+      setProgramWeek(1)
 
       // Fetch this week's stats
       try {
@@ -1363,41 +1363,15 @@ export default function WorkoutPage() {
   return (
     <div className="min-h-screen bg-[#0a0f0a] p-4">
       <div className="max-w-lg mx-auto space-y-4">
-        {/* Header */}
-        <div className="text-center py-6">
-          <div className="mb-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="HangFit Logo" className="w-20 h-20 object-contain mx-auto" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight">HangFit</h1>
-          <p className="text-muted-foreground text-xs mt-0.5">where the hangar meets iron</p>
-        </div>
-
-        {/* Week A/B Toggle + Phase */}
-        <div className="flex items-center justify-between">
-          <div className="flex gap-1 p-1 rounded-xl bg-white/5">
-            {(['A', 'B'] as const).map(w => (
-              <button
-                key={w}
-                onClick={() => setWeekType(w)}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                  weekType === w ? 'bg-orange-500 text-white' : 'text-muted-foreground hover:text-white'
-                }`}
-              >
-                Week {w}
-              </button>
-            ))}
-          </div>
-          <div className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
-            phase === 0 ? 'bg-emerald-500/20 text-emerald-500' :
-            phase === 1 ? 'bg-blue-500/20 text-blue-500' :
-            'bg-red-500/20 text-red-500'
-          }`}>
-            {PHASE_LABELS[phase]} • Week {programWeek}
+        {/* Header — sleek top-left logo + tagline */}
+        <div className="flex items-center gap-3 py-2">
+          <img src="/logo.png" alt="HangFit" className="w-12 h-12 object-contain shrink-0" />
+          <div>
+            <p className="text-sm font-bold tracking-tight">FLY HARD. TRAIN HARD.</p>
           </div>
         </div>
 
-        {/* Stats Row */}
+          {/* Stats Row */}
         <div className="grid grid-cols-3 gap-3">
           <div className="p-4 rounded-xl border bg-card">
             <div className="flex items-center gap-1.5 mb-1">
