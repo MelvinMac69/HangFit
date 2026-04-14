@@ -1446,7 +1446,7 @@ export default function WorkoutPage() {
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold text-white">{currentDay}</p>
-              <p className="text-xs text-muted-foreground">of 7</p>
+              <p className="text-xs text-muted-foreground">of 5</p>
             </div>
           </div>
 
@@ -1465,32 +1465,28 @@ export default function WorkoutPage() {
           )}
         </div>
 
-        {/* 7-Day Overview */}
+        {/* 5-Day Program Grid */}
         <div className="space-y-2">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">This Week</h3>
-          <div className="grid grid-cols-7 gap-1">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Hybrid Program — 5 Days</h3>
+          <div className="flex flex-col gap-2">
             {WORKOUT_PROGRAM.map((d) => {
               const isToday = d.dayNumber === currentDay
-              const isRest = d.type === 'rest'
               return (
                 <button
                   key={d.dayNumber}
-                  onClick={() => {
-                    setCurrentDay(d.dayNumber)
-                    setShowDayPreview(d.dayNumber)
-                  }}
-                  className={`aspect-square rounded-lg flex flex-col items-center justify-center text-xs transition-colors ${
-                    isToday
-                      ? 'bg-orange-500 text-white'
-                      : isRest
-                      ? 'bg-white/5 text-muted-foreground'
-                      : 'bg-white/5 hover:bg-white/10 text-white'
+                  onClick={() => { setCurrentDay(d.dayNumber); setShowDayPreview(d.dayNumber) }}
+                  className={`w-full px-4 py-3 rounded-xl flex items-center justify-between text-sm transition-colors ${
+                    isToday ? 'bg-orange-500 text-white' : 'bg-white/5 hover:bg-white/10 text-white/80'
                   }`}
                 >
-                  <span className="font-bold">{d.dayNumber}</span>
-                  <span className="text-[8px] opacity-70 truncate w-full text-center px-0.5">
-                    {d.dayNumber === 7 ? 'Off' : d.type.charAt(0).toUpperCase()}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${isToday ? 'bg-white/20' : 'bg-white/10'}`}>{d.dayNumber}</span>
+                    <div className="text-left">
+                      <p className="font-semibold text-xs">{d.label}</p>
+                      <p className={`text-[10px] opacity-70 ${isToday ? 'text-white/60' : 'text-white/40'}`}>{d.description || d.type}</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] opacity-50">{d.exercises.length} exercises</span>
                 </button>
               )
             })}
