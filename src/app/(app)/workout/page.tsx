@@ -555,6 +555,7 @@ function SupersetCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold tracking-widest text-orange-500 uppercase">⟳ Superset</span>
+            <span className="text-[10px] text-muted-foreground">({targetReps.min}-{targetReps.max} reps)</span>
           </div>
           <p className="font-semibold text-sm mt-0.5 leading-tight">{groupLabel}</p>
         </div>
