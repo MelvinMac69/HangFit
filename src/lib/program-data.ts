@@ -438,6 +438,7 @@ export const EXERCISES: Record<string, Exercise> = {
     category: 'mobility',
     cue: 'Lower back pressed to floor, arms by ears, hold the hollow',
     youtubeUrl: 'https://www.youtube.com/watch?v=YceIIdhzDPo',
+    isTimeBased: true,
     substitutions: [
       { name: 'Dead Bug', why: 'Easier, alternating limbs' },
       { name: 'Plank', why: 'Prone, simpler setup' },
@@ -473,6 +474,7 @@ export const EXERCISES: Record<string, Exercise> = {
     category: 'mobility',
     cue: 'Stack hips, extend top arm, hold the side plank line',
     youtubeUrl: 'https://www.youtube.com/watch?v=茉莉',
+    isTimeBased: true,
     substitutions: [
       { name: 'Copenhagen Plank', why: 'Adductor emphasis, harder' },
       { name: 'Pallof Press', why: 'Cable anti-rotation' },
@@ -543,6 +545,7 @@ export const EXERCISES: Record<string, Exercise> = {
     category: 'mobility',
     cue: 'Wide stance, sit lateral, knees track toes, hold bottom position',
     youtubeUrl: 'https://www.youtube.com/watch?v=2nG2A2inC6s',
+    isTimeBased: true,
     substitutions: [
       { name: 'Assisted Cossack Squat', why: 'Use TRX or band for support' },
       { name: 'Lateral Lunge Hold', why: 'Less depth, static' },
@@ -615,6 +618,7 @@ export const EXERCISES: Record<string, Exercise> = {
     category: 'mobility',
     cue: 'Hang from bar, squeeze shoulder blades down, breathe and relax',
     youtubeUrl: 'https://www.youtube.com/watch?v=4Eu-EK-P2KI',
+    isTimeBased: true,
     substitutions: [
       { name: 'Active Hang', why: 'Pull shoulders down actively' },
       { name: 'Lat Hang (band assisted)', why: 'More passive stretch' },
@@ -651,6 +655,7 @@ export const EXERCISES: Record<string, Exercise> = {
     category: 'calisthenics',
     cue: 'Tuck hard, retract scapulae, hold horizontal line — no sag or pike',
     youtubeUrl: 'https://www.youtube.com/watch?v=eXYCKTwK9EI',
+    isTimeBased: true,
     substitutions: [
       { name: 'Advanced Tuck FL Hold', why: 'Longer lever, harder' },
       { name: 'Hanging Knee Raise (tucked)', why: 'Simpler hold, build hollow body' },

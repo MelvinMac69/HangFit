@@ -39,8 +39,8 @@ const LOWER_MOBILITY = [
 ]
 
 const UPPER_MOBILITY = [
-  { name: 'Tall Plank on Rings Hold', detail: '3×45s' },
-  { name: 'Lat Hang + Thoracic Extension', detail: '30s' },
+  { name: 'Lat Hang + Thoracic Extension', detail: '3×30s' },
+  { name: '90/90 Hip Switch', detail: '10 reps each direction' },
 ]
 
 export const WORKOUT_PROGRAM: WorkoutDay[] = [

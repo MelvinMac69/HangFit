@@ -21,6 +21,8 @@ export interface Exercise {
   customReps?: number | string
   youtubeUrl?: string
   substitutions?: { name: string; why: string }[]
+  /** Time-based hold exercise — show a tap-to-start timer instead of rep count */
+  isTimeBased?: boolean
 }
 
 export interface WorkoutSet {

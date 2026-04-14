@@ -158,6 +158,67 @@ function InlineRestTimer({ onSkip, label }: { onSkip: () => void; label?: string
   )
 }
 
+// ============================================================
+// WORK TIMER — tap-to-start timer for time-based exercises
+// ============================================================
+function WorkTimer({
+  duration,
+  onDone,
+}: {
+  duration: number // seconds
+  onDone: () => void
+}) {
+  const endTimeRef = React.useRef<number | null>(null)
+  const [remaining, setRemaining] = React.useState(duration)
+  const [running, setRunning] = React.useState(false)
+  const onDoneRef = React.useRef(onDone)
+  React.useEffect(() => { onDoneRef.current = onDone }, [onDone])
+
+  React.useEffect(() => {
+    if (!running) return
+    endTimeRef.current = Date.now() + remaining * 1000
+    const tick = () => {
+      if (!endTimeRef.current) return
+      const left = Math.max(0, Math.ceil((endTimeRef.current - Date.now()) / 1000))
+      setRemaining(left)
+      if (left <= 0) {
+        setRunning(false)
+        onDoneRef.current()
+      }
+    }
+    tick()
+    const id = setInterval(tick, 100)
+    return () => clearInterval(id)
+  }, [running])
+
+  const progress = ((duration - remaining) / duration) * 100
+
+  if (!running && remaining === duration) {
+    return (
+      <button
+        onClick={() => setRunning(true)}
+        className="px-4 py-2 rounded-lg bg-orange-500/20 border border-orange-500/40 text-orange-400 text-sm font-medium hover:bg-orange-500/30 transition-colors"
+      >
+        ⏱ Tap to start ({duration}s)
+      </button>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-2 bg-orange-500/10 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-orange-500 rounded-full transition-all duration-100"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <span className="text-sm font-medium text-orange-400 w-12 text-right">
+        {Math.floor(remaining / 60)}:{(remaining % 60).toString().padStart(2, '0')}
+      </span>
+    </div>
+  )
+}
+
 // Set Row Component
 function SetRow({
   set,
@@ -165,12 +226,14 @@ function SetRow({
   onUpdate,
   onComplete,
   targetReps,
+  isTimeBased,
 }: {
   set: LocalSet
   index: number
   onUpdate: (weight: number, reps: number) => void
   onComplete: () => void
   targetReps: { min: number; max: number }
+  isTimeBased?: boolean
 }) {
   const [weight, setWeight] = useState(set.weight.toString())
   const [reps, setReps] = useState(set.reps.toString())
@@ -205,22 +268,32 @@ function SetRow({
         }`}
       />
       <span className={set.completed ? 'text-emerald-400' : 'text-muted-foreground'}>lbs</span>
-      <span className={set.completed ? 'text-emerald-400 mx-1' : 'text-muted-foreground mx-1'}>×</span>
-      <input
-        type="number"
-        inputMode="numeric"
-        value={reps}
-        onChange={(e) => handleRepsChange(e.target.value)}
-        placeholder={targetReps.min.toString()}
-        className={`w-16 px-3 py-2 rounded-lg border text-center font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors ${
-          set.completed 
-            ? 'bg-emerald-500/10 border-emerald-500/30 text-white' 
-            : 'bg-white/5 border-white/10'
-        }`}
-      />
-      <span className={`text-xs transition-colors ${set.completed ? 'text-emerald-400' : 'text-muted-foreground'}`}>
-        ({targetReps.min}-{targetReps.max})
-      </span>
+      {isTimeBased ? (
+        <WorkTimer
+          duration={typeof set.reps === 'number' ? set.reps : parseInt(set.reps as string) || 30}
+          onDone={() => {
+            onComplete()
+          }}
+        />
+      ) : (
+        <>
+          <input
+            type="number"
+            inputMode="numeric"
+            value={reps}
+            onChange={(e) => handleRepsChange(e.target.value)}
+            placeholder={targetReps.min.toString()}
+            className={`w-16 px-3 py-2 rounded-lg border text-center font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors ${
+              set.completed
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-white'
+                : 'bg-white/5 border-white/10'
+            }`}
+          />
+          <span className={`text-xs transition-colors ${set.completed ? 'text-emerald-400' : 'text-muted-foreground'}`}>
+            ({targetReps.min}-{targetReps.max})
+          </span>
+        </>
+      )}
       <div className="flex-1" />
       <button
         onClick={() => onComplete()}
@@ -263,6 +336,7 @@ function ExerciseCard({
   substitutions?: { name: string; why: string }[]
   supersetLabel?: string
   onSwitchExercise?: (exerciseIndex: number, newName: string) => void
+  isTimeBased?: boolean
 }) {
   const [expanded, setExpanded] = useState(true)
   const [showSubs, setShowSubs] = useState(false)
@@ -551,8 +625,9 @@ function SupersetCard({
                             type="number"
                             inputMode="numeric"
                             placeholder={targetReps.min.toString()}
-                            value={set?.reps ?? ''}
+                            value={typeof set?.reps === 'number' ? set.reps : ''}
                             onChange={(e) => onUpdateSet(baseIndex + exIdx, setIndex, typeof set?.weight === 'number' ? set.weight : 0, parseInt(e.target.value) || 0)}
+                            disabled={exData?.isTimeBased}
                             className="w-10 px-1 py-1 rounded bg-white/5 border border-white/10 text-center text-xs font-medium focus:outline-none focus:ring-1 focus:ring-orange-500/50"
                           />
                           <button
@@ -1278,6 +1353,7 @@ export default function WorkoutPage() {
                     cue={exData?.cue}
                     substitutions={exData?.substitutions}
                     onSwitchExercise={(_exIdx: number, newName: string) => handleSwitchExercise(thisIdx, newName)}
+                    isTimeBased={exData?.isTimeBased}
                   />
                 )
                 exerciseIdx++
