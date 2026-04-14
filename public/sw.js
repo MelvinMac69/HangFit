@@ -1,14 +1,11 @@
-const CACHE_NAME = 'hangfit-v3';
-const urlsToCache = [
-  '/',
-  '/workout',
-  '/history',
-  '/settings',
-];
+const CACHE_NAME = 'hangfit-v5';
+const OFFLINE_URL = '/workout';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.add(OFFLINE_URL).catch(() => {});
+    })
   );
   self.skipWaiting();
 });
@@ -27,18 +24,59 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Don't intercept cross-origin requests (like Supabase API calls)
   const url = new URL(event.request.url);
+
+  // Skip cross-origin requests
   if (url.origin !== location.origin) {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      if (response) {
+  // Always network-first for navigation requests (this is the key fix)
+  // iOS Safari is very picky about cached redirects
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).then((response) => {
+        // Only cache clean 200 responses — never cache redirects
+        if (response.status === 200 && !response.redirected) {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+        }
         return response;
+      }).catch(() => {
+        // Network failed — try cache, fall back to workout page
+        return caches.match(event.request).then((cached) => {
+          if (cached && !cached.redirected) {
+            return cached;
+          }
+          return caches.match(OFFLINE_URL);
+        });
+      })
+    );
+    return;
+  }
+
+  // For static assets, use stale-while-revalidate
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      if (cached && !cached.redirected) {
+        const fetchPromise = fetch(event.request).then((response) => {
+          if (response.ok && !response.redirected) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+          }
+          return response;
+        }).catch(() => {});
+        return fetchPromise;
       }
-      return fetch(event.request);
+      return fetch(event.request).then((response) => {
+        if (response.ok && !response.redirected) {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+        }
+        return response;
+      }).catch(() => cached);
     })
   );
 });
