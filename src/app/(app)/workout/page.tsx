@@ -616,7 +616,7 @@ function SupersetCard({
                             type="number"
                             inputMode="decimal"
                             placeholder="0"
-                            value={set?.weight ?? ''}
+                            value={typeof set?.weight === 'number' ? set.weight : ''}
                             onChange={(e) => onUpdateSet(baseIndex + exIdx, setIndex, parseFloat(e.target.value) || 0, typeof set?.reps === 'number' ? set.reps : 0)}
                             className="w-12 px-1 py-1 rounded bg-white/5 border border-white/10 text-center text-xs font-medium focus:outline-none focus:ring-1 focus:ring-orange-500/50"
                           />
