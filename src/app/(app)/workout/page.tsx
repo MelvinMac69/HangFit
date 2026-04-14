@@ -653,6 +653,9 @@ export default function WorkoutPage() {
   }, [workoutExercises])
   const [savedWorkoutKey, setSavedWorkoutKey] = useState<string | null>(null)
   const [workoutStarted, setWorkoutStarted] = useState(false)
+  const [justCompleted, setJustCompleted] = useState(false)
+  // Reset completion state when day changes
+  useEffect(() => { setJustCompleted(false) }, [currentDay])
   const [lastSessionWeights, setLastSessionWeights] = useState<Record<string, number>>({})
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null)
   const router = useRouter()
@@ -1050,8 +1053,12 @@ export default function WorkoutPage() {
         await supabase.from('workout_sets').insert(setsToInsert)
       }
 
-      // Success - redirect to history
-      router.push('/history')
+      // Success — show completion state on dashboard
+      setJustCompleted(true)
+      if (savedWorkoutKey) localStorage.removeItem(savedWorkoutKey)
+      setSavedWorkoutKey(null)
+      setWorkoutActive(false)
+      setWorkoutStarted(false)
     } catch (err) {
       console.error('Error saving workout:', JSON.stringify(err, null, 2))
       alert('Failed to save workout: ' + (err instanceof Error ? err.message : JSON.stringify(err)))
@@ -1432,11 +1439,25 @@ export default function WorkoutPage() {
           </button>
         )}
 
+        {/* Post-Workout Celebration */}
+        {justCompleted && (
+          <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-center">
+            <p className="text-lg font-bold text-emerald-400">Great work today! 💪</p>
+            <p className="text-xs text-white/50 mt-1">Recovery starts now. Come back tomorrow.</p>
+            <button
+              onClick={() => setJustCompleted(false)}
+              className="mt-3 text-xs text-muted-foreground hover:text-white/60 underline"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         {/* Current Day Card */}
         <div className={`p-5 rounded-2xl border ${getDayBgColor(day?.type || 'rest')}`}>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Today</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">{justCompleted ? 'Up Next' : 'Today'}</p>
               <h2 className={`text-xl font-bold mt-0.5 ${getDayColor(day?.type || 'rest')}`}>
                 {day ? getDayLabel(currentDay, weekType) : 'Rest Day'}
               </h2>
@@ -1464,6 +1485,34 @@ export default function WorkoutPage() {
             </div>
           )}
         </div>
+
+        {/* Jump Back In — only for abandoned sessions */}
+        {savedWorkoutKey && !justCompleted && (
+          <button
+            onClick={() => {
+              try {
+                const saved = localStorage.getItem(savedWorkoutKey)
+                if (!saved) return
+                const parsed = JSON.parse(saved)
+                setCurrentDay(parsed.currentDay)
+                setWeekType(parsed.weekType)
+                setPhase(parsed.phase)
+                setProgramWeek(parsed.programWeek)
+                setWorkoutExercises(parsed.workoutExercises)
+                setWorkoutNotes(parsed.workoutNotes || '')
+                setWorkoutStartTime(parsed.workoutStartTime ? new Date(parsed.workoutStartTime) : new Date())
+                setWorkoutElapsed(parsed.elapsed || 0)
+                setTimerRunning(false)
+                setWorkoutActive(true)
+                setWorkoutNotes(parsed.workoutNotes || '')
+                setWorkoutStarted(parsed.started ?? true)
+              } catch {}
+            }}
+            className="w-full py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-semibold text-sm hover:bg-emerald-500/20 transition-colors flex items-center justify-center gap-2"
+          >
+            <Zap className="w-4 h-4" /> Jump Back In
+          </button>
+        )}
 
         {/* 5-Day Program Grid */}
         <div className="space-y-2">
