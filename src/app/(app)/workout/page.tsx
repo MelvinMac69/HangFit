@@ -219,6 +219,94 @@ function WorkTimer({
   )
 }
 
+// ============================================================
+// EMOM TIMER — fixed-interval timer with minute chimes (for KB Swings)
+// ============================================================
+function EMOMTimer({
+  totalMinutes,
+  onDone,
+}: {
+  totalMinutes: number
+  onDone: () => void
+}) {
+  const totalSeconds = totalMinutes * 60
+  const endTimeRef = React.useRef<number | null>(null)
+  const [remaining, setRemaining] = React.useState(totalSeconds)
+  const [running, setRunning] = React.useState(false)
+  const [minuteMark, setMinuteMark] = React.useState(totalSeconds)
+  const onDoneRef = React.useRef(onDone)
+  React.useEffect(() => { onDoneRef.current = onDone }, [onDone])
+
+  React.useEffect(() => {
+    if (!running) return
+    endTimeRef.current = Date.now() + totalSeconds * 1000
+    setMinuteMark(totalSeconds)
+    const tick = () => {
+      if (!endTimeRef.current) return
+      const left = Math.max(0, Math.ceil((endTimeRef.current - Date.now()) / 1000))
+      setRemaining(left)
+      // Minute chime: when we cross a 1-minute boundary from above
+      const nextMark = Math.floor((endTimeRef.current - Date.now()) / 1000 / 60) * 60
+      if (nextMark < minuteMark && nextMark >= 0) {
+        setMinuteMark(nextMark)
+        // Audio chime via Web Audio API
+        try {
+          const ctx = new AudioContext()
+          const osc = ctx.createOscillator()
+          const gain = ctx.createGain()
+          osc.connect(gain)
+          gain.connect(ctx.destination)
+          osc.frequency.value = 880
+          gain.gain.setValueAtTime(0.3, ctx.currentTime)
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
+          osc.start(ctx.currentTime)
+          osc.stop(ctx.currentTime + 0.4)
+        } catch {}
+      }
+      if (left <= 0) {
+        setRunning(false)
+        onDoneRef.current()
+      }
+    }
+    tick()
+    const id = setInterval(tick, 100)
+    return () => clearInterval(id)
+  }, [running, totalSeconds, minuteMark])
+
+  const progress = ((totalSeconds - remaining) / totalSeconds) * 100
+  const minutesLeft = Math.ceil(remaining / 60)
+
+  if (!running) {
+    return (
+      <button
+        onClick={() => setRunning(true)}
+        className="px-4 py-2 rounded-lg bg-orange-500/20 border border-orange-500/40 text-orange-400 text-sm font-medium hover:bg-orange-500/30 transition-colors"
+      >
+        ⏱ EMOM {totalMinutes}min — Tap to start
+      </button>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-orange-400">
+          {minutesLeft > 1 ? `${minutesLeft} min remaining` : 'Final minute!'}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {Math.floor(remaining / 60)}:{(remaining % 60).toString().padStart(2, '0')}
+        </span>
+      </div>
+      <div className="h-2 bg-orange-500/10 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-orange-500 rounded-full transition-all duration-100"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+    </div>
+  )
+}
+
 // Set Row Component
 function SetRow({
   set,
@@ -324,6 +412,7 @@ function ExerciseCard({
   supersetLabel,
   onSwitchExercise,
   isTimeBased,
+  isEMOM,
 }: {
   exercise: LocalExercise
   sets: LocalSet[]
@@ -338,6 +427,7 @@ function ExerciseCard({
   supersetLabel?: string
   onSwitchExercise?: (exerciseIndex: number, newName: string) => void
   isTimeBased?: boolean
+  isEMOM?: boolean
 }) {
   const [expanded, setExpanded] = useState(true)
   const [showSubs, setShowSubs] = useState(false)
@@ -442,6 +532,25 @@ function ExerciseCard({
 
       {expanded && (
         <div className="px-4 pb-4 space-y-2">
+          {/* EMOM Timer for interval-based exercises (e.g. KB swings) */}
+          {isEMOM && (
+            <div className="mb-3 p-3 rounded-lg bg-orange-500/10 border border-orange-500/30">
+              <p className="text-xs text-orange-400 font-semibold mb-2">10-min EMOM — 20 swings/min</p>
+              <EMOMTimer
+                totalMinutes={10}
+                onDone={() => {
+                  // Mark all sets complete when EMOM ends
+                  sets.forEach((_, i) => {
+                    if (!sets[i].completed) {
+                      setLocalCompleted(prev => ({ ...prev, [i]: true }))
+                      handleToggle(i)
+                    }
+                  })
+                }}
+              />
+            </div>
+          )}
+
           {sets.map((set, i) => (
             <div key={`${set.id}-${set.completed ? "done" : "pending"}`}>
               <div className={`flex items-center gap-2 p-3 rounded-lg border transition-colors ${
@@ -1361,6 +1470,7 @@ export default function WorkoutPage() {
                     substitutions={exData?.substitutions}
                     onSwitchExercise={(_exIdx: number, newName: string) => handleSwitchExercise(thisIdx, newName)}
                     isTimeBased={exData?.isTimeBased}
+                    isEMOM={exData?.isEMOM}
                   />
                 )
                 exerciseIdx++

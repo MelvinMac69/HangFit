@@ -328,9 +328,11 @@ export const EXERCISES: Record<string, Exercise> = {
   'kettlebell-swing': {
     id: 'kettlebell-swing',
     name: 'Kettlebell Swing',
-    category: 'explosive',
+    category: 'conditioning',
     cue: 'Hinge and hike, snap hips forward at apex, let KB float back',
     youtubeUrl: 'https://www.youtube.com/watch?v=jYtimecuwuw',
+    isEMOM: true,
+    isTimeBased: true,
     substitutions: [
       { name: 'Dumbbell Swing', why: 'DB substitute' },
       { name: 'Hip Thrust (explosive)', why: 'Loaded hip extension' },

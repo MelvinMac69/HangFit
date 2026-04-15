@@ -23,6 +23,8 @@ export interface Exercise {
   substitutions?: { name: string; why: string }[]
   /** Time-based hold exercise — show a tap-to-start timer instead of rep count */
   isTimeBased?: boolean
+  /** EMOM-style interval timer — e.g. 10min KB swings */
+  isEMOM?: boolean
 }
 
 export interface WorkoutSet {
