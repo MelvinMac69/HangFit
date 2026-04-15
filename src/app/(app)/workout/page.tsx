@@ -323,6 +323,7 @@ function ExerciseCard({
   substitutions,
   supersetLabel,
   onSwitchExercise,
+  isTimeBased,
 }: {
   exercise: LocalExercise
   sets: LocalSet[]
@@ -710,6 +711,7 @@ export default function WorkoutPage() {
   const [showRestTimer, setShowRestTimer] = useState(false)
   const [restSeconds, setRestSeconds] = useState(90)
   const [warmUpComplete, setWarmUpComplete] = useState<boolean[]>([])
+  const [mobilityComplete, setMobilityComplete] = useState<boolean[]>([])
   const [workoutNotes, setWorkoutNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [showDayPicker, setShowDayPicker] = useState(false)
@@ -940,13 +942,14 @@ export default function WorkoutPage() {
       const progEx = EXERCISES[ex.id]
       const targetReps = getTargetReps(phase, ex.category)
       const lastWeight = lastWeights[ex.id] || 0
+      const useWeight = lastWeight > 0 ? lastWeight : 0
       return {
         exerciseId: ex.id,
         exerciseName: ex.name,
         sets: [
-          { id: genId(), weight: lastWeight, reps: targetReps.min, completed: false },
-          { id: genId(), weight: lastWeight, reps: targetReps.min, completed: false },
-          { id: genId(), weight: lastWeight, reps: targetReps.min, completed: false },
+          { id: genId(), weight: useWeight, reps: targetReps.min, completed: false },
+          { id: genId(), weight: useWeight, reps: targetReps.min, completed: false },
+          { id: genId(), weight: useWeight, reps: targetReps.min, completed: false },
         ],
         supersetGroup: (ex as any).supersetGroup,
       }
@@ -955,6 +958,7 @@ export default function WorkoutPage() {
     setWorkoutExercises(exercises)
     setWorkoutNotes('')
     setWarmUpComplete(new Array(day.warmUp.length).fill(false))
+    setMobilityComplete(new Array(day.mobilityBlock?.length || 0).fill(false))
     setWorkoutActive(true)
     setWorkoutStartTime(new Date())
     setWorkoutElapsed(0)
@@ -1003,7 +1007,7 @@ export default function WorkoutPage() {
   }
 
   const handleToggleSet = (exerciseIndex: number, setIndex: number) => {
-    // Start workout timer on first set completion — only if officially started
+    // Start workout timer on first set completion (warmup OR exercise)
     if (!timerRunning && workoutStarted) {
       setTimerRunning(true)
     }
@@ -1275,6 +1279,8 @@ export default function WorkoutPage() {
                       const updated = [...warmUpComplete]
                       updated[i] = !updated[i]
                       setWarmUpComplete(updated)
+                      // Start timer on first warmup item checked
+                      if (!timerRunning && workoutStarted) setTimerRunning(true)
                     }}
                     className={`w-5 h-5 rounded border flex items-center justify-center ${
                       warmUpComplete[i] ? 'bg-emerald-500 border-emerald-500' : 'border-white/30'
@@ -1367,17 +1373,35 @@ export default function WorkoutPage() {
           {day.mobilityBlock && day.mobilityBlock.length > 0 && (
             <div className="rounded-xl border bg-card text-card-foreground overflow-hidden">
               <div className="p-4 border-b border-white/10">
-                <div className="flex items-center gap-2">
-                  <Timer className="w-4 h-4 text-cyan-500" />
-                  <h3 className="font-semibold">Mobility</h3>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Timer className="w-4 h-4 text-cyan-500" />
+                    <h3 className="font-semibold">Mobility</h3>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {mobilityComplete.filter(Boolean).length}/{mobilityComplete.length}
+                  </span>
                 </div>
               </div>
               <div className="p-4 space-y-2">
                 {day.mobilityBlock.map((move, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-cyan-500" />
-                    <div>
-                      <p className="text-sm">{move.name}</p>
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
+                    <button
+                      onClick={() => {
+                        const updated = [...mobilityComplete]
+                        updated[i] = !updated[i]
+                        setMobilityComplete(updated)
+                        // Start timer on first mobility item checked
+                        if (!timerRunning && workoutStarted) setTimerRunning(true)
+                      }}
+                      className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 ${
+                        mobilityComplete[i] ? 'bg-emerald-500 border-emerald-500' : 'border-white/30'
+                      }`}
+                    >
+                      {mobilityComplete[i] && <Check className="w-3 h-3 text-white" />}
+                    </button>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{move.name}</p>
                       <p className="text-xs text-muted-foreground">{move.detail}</p>
                     </div>
                   </div>
