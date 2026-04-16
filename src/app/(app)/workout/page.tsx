@@ -876,28 +876,24 @@ export default function WorkoutPage() {
       }
       setUser(user)
 
-      // Smart day detection: resume from last completed workout or saved partial workout
+      // Smart day detection: always check Supabase for last completed workout first
+      // This ensures we recommend the correct next day regardless of localStorage state
       const scanLocalStorage = () => {
-        for (const wt of ['A', 'B'] as const) {
+        for (const wt of (['A', 'B'] as const)) {
           for (let d = 1; d <= 5; d++) {
             const key = `hangfit_workout_${d}_${wt}`
-            if (localStorage.getItem(key)) return { day: d, wt }
+            if (localStorage.getItem(key)) return { day: d, wt, key }
           }
         }
         return null
       }
 
-      const savedPartial = scanLocalStorage()
-      if (savedPartial) {
-        setCurrentDay(savedPartial.day)
-        setWeekType(savedPartial.wt)
-        setSavedWorkoutKey(`hangfit_workout_${savedPartial.day}_${savedPartial.wt}`)
-      } else if (supabase && user) {
-        // No local workout — check Supabase for most recent completed workout
+      // Always check Supabase for last completed workout to determine recommended day
+      if (supabase && user) {
         try {
           const { data: lastLog } = await supabase
             .from('workout_logs')
-            .select('day_number')
+            .select('day_number, week_type')
             .eq('user_id', user.id)
             .order('created_at', { ascending: false })
             .limit(1)
@@ -905,14 +901,25 @@ export default function WorkoutPage() {
           if (lastLog?.day_number) {
             const nextDay = Math.min((lastLog.day_number % 5) + 1, 5)
             setCurrentDay(nextDay)
+            setWeekType(lastLog.week_type || 'A')
           } else {
             setCurrentDay(1)
+            setWeekType('A')
           }
         } catch {
           setCurrentDay(1)
+          setWeekType('A')
         }
       }
-      setWeekType('A')
+
+      // Then check localStorage for a partial/in-progress workout to offer "Jump Back In"
+      const savedPartial = scanLocalStorage()
+      if (savedPartial) {
+        setSavedWorkoutKey(savedPartial.key)
+        // Only override the Supabase day if localStorage is newer (in-progress workout)
+        // If the user has no completed history, use the localStorage day
+      }
+
       setPhase(0)
       setProgramWeek(1)
 
