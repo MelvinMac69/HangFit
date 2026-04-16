@@ -255,7 +255,7 @@ function WorkTimer({
 }
 
 // ============================================================
-// EMOM TIMER — fixed-interval timer with minute chimes (for KB Swings)
+// EMOM TIMER — circular SVG progress + round counter for KB Swings
 // ============================================================
 function EMOMTimer({
   totalMinutes,
@@ -264,87 +264,69 @@ function EMOMTimer({
   totalMinutes: number
   onDone: () => void
 }) {
-  const totalSeconds = totalMinutes * 60
-  const endTimeRef = React.useRef<number | null>(null)
-  const [remaining, setRemaining] = React.useState(totalSeconds)
-  const [running, setRunning] = React.useState(false)
-  const [minuteMark, setMinuteMark] = React.useState(totalSeconds)
+  const [phase, setPhase] = React.useState<'idle' | 'countdown' | 'running' | 'done'>('idle')
   const [countdown, setCountdown] = React.useState(5)
-  const [countdownActive, setCountdownActive] = React.useState(false)
+  const [secondsLeft, setSecondsLeft] = React.useState(59)
+  const [totalSecondsLeft, setTotalSecondsLeft] = React.useState(totalMinutes * 60)
+  const [currentRound, setCurrentRound] = React.useState(1)
   const onDoneRef = React.useRef(onDone)
   React.useEffect(() => { onDoneRef.current = onDone }, [onDone])
 
-  // 5-second countdown before EMOM starts
+  // Countdown phase: tick down every second
   React.useEffect(() => {
-    if (!countdownActive) return
+    if (phase !== 'countdown') return
     if (countdown <= 0) {
-      setCountdownActive(false)
-      setRunning(true)
+      setPhase('running')
+      setSecondsLeft(59)
+      setTotalSecondsLeft(totalMinutes * 60)
+      setCurrentRound(1)
       return
     }
     const id = setTimeout(() => setCountdown(c => c - 1), 1000)
     return () => clearTimeout(id)
-  }, [countdownActive, countdown])
+  }, [phase, countdown, totalMinutes])
 
-
+  // Running phase: tick every 100ms
   React.useEffect(() => {
-    if (!running) return
-    endTimeRef.current = Date.now() + totalSeconds * 1000
-    setMinuteMark(totalSeconds)
+    if (phase !== 'running') return
+    const endTime = Date.now() + totalSecondsLeft * 1000
     const tick = () => {
-      if (!endTimeRef.current) return
-      const left = Math.max(0, Math.ceil((endTimeRef.current - Date.now()) / 1000))
-      setRemaining(left)
-      // Minute chime: when we cross a 1-minute boundary from above
-      const nextMark = Math.floor((endTimeRef.current - Date.now()) / 1000 / 60) * 60
-      if (nextMark < minuteMark && nextMark >= 0) {
-        setMinuteMark(nextMark)
-        try {
-          const ctx = new AudioContext()
-          const osc = ctx.createOscillator()
-          const gain = ctx.createGain()
-          osc.connect(gain)
-          gain.connect(ctx.destination)
-          osc.frequency.value = 880
-          gain.gain.setValueAtTime(0.3, ctx.currentTime)
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
-          osc.start(ctx.currentTime)
-          osc.stop(ctx.currentTime + 0.4)
-        } catch {}
-      }
+      const left = Math.max(0, Math.ceil((endTime - Date.now()) / 1000))
+      setTotalSecondsLeft(left)
+      const secsInRound = (left % 60) || 60
+      setSecondsLeft(secsInRound)
+      const elapsed = totalMinutes * 60 - left
+      const round = Math.min(Math.floor(elapsed / 60) + 1, totalMinutes)
+      setCurrentRound(round)
       if (left <= 0) {
-        setRunning(false)
+        setPhase('done')
         onDoneRef.current()
       }
     }
     tick()
     const id = setInterval(tick, 100)
     return () => clearInterval(id)
-  }, [running, totalSeconds, minuteMark])
+  }, [phase, totalMinutes])
 
-  const progress = ((totalSeconds - remaining) / totalSeconds) * 100
-  const minutesLeft = Math.ceil(remaining / 60)
-  const currentRound = totalMinutes - minutesLeft + 1
+  const R = 52
+  const circ = 2 * Math.PI * R
+  // progressInMinute: 0→full when timer just started, 1→0 when about to reset
+  const progressInMinute = secondsLeft === 60 ? 0 : (60 - secondsLeft) / 60
+  const dashOffset = circ * progressInMinute
 
-  // 5-second countdown overlay
-  if (countdownActive) {
+  if (phase === 'countdown') {
     return (
       <div className="flex flex-col items-center justify-center p-6 rounded-xl bg-orange-500/20 border-2 border-orange-500/50">
-        <span className="text-7xl font-bold text-orange-400 font-mono leading-none">
-          {countdown}
-        </span>
+        <span className="text-7xl font-bold text-orange-400 font-mono leading-none">{countdown}</span>
         <span className="text-sm text-orange-300 mt-2">Get ready — {totalMinutes} min EMOM</span>
       </div>
     )
   }
 
-  if (!running && remaining === totalSeconds) {
+  if (phase === 'idle') {
     return (
       <button
-        onClick={() => {
-          setCountdown(5)
-          setCountdownActive(true)
-        }}
+        onClick={() => { setCountdown(5); setPhase('countdown') }}
         className="w-full py-4 rounded-xl bg-orange-500/20 border-2 border-orange-500/40 text-orange-400 text-center text-base font-bold hover:bg-orange-500/30 transition-colors"
       >
         ⏱ START — {totalMinutes}-min EMOM (10 rounds × 60s)
@@ -353,26 +335,29 @@ function EMOMTimer({
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-center">
-        <span className="text-5xl font-bold text-orange-400 font-mono">
-          {Math.floor(remaining / 60)}:{(remaining % 60).toString().padStart(2, '0')}
-        </span>
+    <div className="flex flex-col items-center gap-2">
+      {/* SVG circular timer */}
+      <div className="relative w-32 h-32">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r={R} fill="none" stroke="rgba(249,115,22,0.15)" strokeWidth="10" />
+          <circle
+            cx="60" cy="60" r={R} fill="none" stroke="#f97316" strokeWidth="10"
+            strokeLinecap="round" strokeDasharray={circ}
+            strokeDashoffset={dashOffset}
+            style={{ transition: 'stroke-dashoffset 0.08s linear' }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-3xl font-bold text-white leading-none">{currentRound}</span>
+          <span className="text-xs text-orange-400">/ {totalMinutes}</span>
+        </div>
       </div>
-      <div className="text-center">
-        <span className="text-2xl font-bold text-white">
-          Round {Math.min(currentRound, totalMinutes)}/{totalMinutes}
-        </span>
-      </div>
-      <div className="h-3 bg-orange-500/10 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-orange-500 rounded-full transition-all duration-100"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>{minutesLeft > 1 ? `${minutesLeft} min remaining` : 'Final minute!'}</span>
-        <span>20 swings / round</span>
+      {/* MM:SS clock */}
+      <span className="text-3xl font-bold text-orange-400 font-mono">
+        {Math.floor(totalSecondsLeft / 60)}:{(totalSecondsLeft % 60).toString().padStart(2, '0')}
+      </span>
+      <div className="text-xs text-muted-foreground">
+        {totalSecondsLeft > 60 ? `${Math.ceil(totalSecondsLeft / 60) - 1} min remaining` : 'Final minute!'}
       </div>
     </div>
   )
@@ -1211,13 +1196,15 @@ export default function WorkoutPage() {
       const targetReps = getTargetReps(phase, ex.category)
       const lastWeight = lastWeights[ex.id] || 0
       const useWeight = lastWeight > 0 ? lastWeight : 0
+      const isTime = progEx?.isTimeBased ?? false
+      const defaultReps = isTime ? (progEx?.duration ?? 30) : targetReps.min
       return {
         exerciseId: ex.id,
         exerciseName: ex.name,
         sets: [
-          { id: genId(), weight: useWeight, reps: targetReps.min, completed: false },
-          { id: genId(), weight: useWeight, reps: targetReps.min, completed: false },
-          { id: genId(), weight: useWeight, reps: targetReps.min, completed: false },
+          { id: genId(), weight: useWeight, reps: defaultReps, completed: false },
+          { id: genId(), weight: useWeight, reps: defaultReps, completed: false },
+          { id: genId(), weight: useWeight, reps: defaultReps, completed: false },
         ],
         supersetGroup: (ex as any).supersetGroup,
       }

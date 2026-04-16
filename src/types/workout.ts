@@ -25,6 +25,8 @@ export interface Exercise {
   isTimeBased?: boolean
   /** EMOM-style interval timer — e.g. 10min KB swings */
   isEMOM?: boolean
+  /** Default duration in seconds for time-based exercises */
+  duration?: number
 }
 
 export interface WorkoutSet {

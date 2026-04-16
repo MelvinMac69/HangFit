@@ -658,6 +658,7 @@ export const EXERCISES: Record<string, Exercise> = {
     cue: 'Tuck hard, retract scapulae, hold horizontal line — no sag or pike',
     youtubeUrl: 'https://www.youtube.com/watch?v=eXYCKTwK9EI',
     isTimeBased: true,
+    duration: 15,
     substitutions: [
       { name: 'Advanced Tuck FL Hold', why: 'Longer lever, harder' },
       { name: 'Hanging Knee Raise (tucked)', why: 'Simpler hold, build hollow body' },
