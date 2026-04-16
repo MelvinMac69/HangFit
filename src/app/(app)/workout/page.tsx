@@ -841,6 +841,12 @@ export default function WorkoutPage() {
   const [savedWorkoutKey, setSavedWorkoutKey] = useState<string | null>(null)
   const [workoutStarted, setWorkoutStarted] = useState(false)
   const [justCompleted, setJustCompleted] = useState(false)
+  // Guard: if user tries to check a box before starting, prompt them
+  const [pendingToggle, setPendingToggle] = useState<{
+    type: 'warmup' | 'mobility' | 'exercise'
+    exerciseIndex?: number
+    setIndex?: number
+  } | null>(null)
   const [lastSessionWeights, setLastSessionWeights] = useState<Record<string, number>>({})
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null)
   const router = useRouter()
@@ -870,10 +876,42 @@ export default function WorkoutPage() {
       }
       setUser(user)
 
-      // Calculate program position (using Jan 1, 2026 as start for demo)
-      const startDate = new Date('2026-01-01')
-      const pos = calculateProgramPosition(startDate)
-      setCurrentDay(1)
+      // Smart day detection: resume from last completed workout or saved partial workout
+      const scanLocalStorage = () => {
+        for (const wt of ['A', 'B'] as const) {
+          for (let d = 1; d <= 5; d++) {
+            const key = `hangfit_workout_${d}_${wt}`
+            if (localStorage.getItem(key)) return { day: d, wt }
+          }
+        }
+        return null
+      }
+
+      const savedPartial = scanLocalStorage()
+      if (savedPartial) {
+        setCurrentDay(savedPartial.day)
+        setWeekType(savedPartial.wt)
+        setSavedWorkoutKey(`hangfit_workout_${savedPartial.day}_${savedPartial.wt}`)
+      } else if (supabase && user) {
+        // No local workout — check Supabase for most recent completed workout
+        try {
+          const { data: lastLog } = await supabase
+            .from('workout_logs')
+            .select('day_number')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single()
+          if (lastLog?.day_number) {
+            const nextDay = Math.min((lastLog.day_number % 5) + 1, 5)
+            setCurrentDay(nextDay)
+          } else {
+            setCurrentDay(1)
+          }
+        } catch {
+          setCurrentDay(1)
+        }
+      }
       setWeekType('A')
       setPhase(0)
       setProgramWeek(1)
@@ -1116,6 +1154,10 @@ export default function WorkoutPage() {
   }
 
   const handleToggleSet = (exerciseIndex: number, setIndex: number) => {
+    if (!workoutStarted) {
+      setPendingToggle({ type: 'exercise', exerciseIndex, setIndex })
+      return
+    }
     // Start workout timer on first set completion (warmup OR exercise)
     if (!timerRunning && workoutStarted) {
       setTimerRunning(true)
@@ -1339,6 +1381,40 @@ export default function WorkoutPage() {
           </div>
         )}
 
+        {/* Start Workout? Guard Modal */}
+        {pendingToggle && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+            <div className="w-full max-w-sm rounded-2xl bg-[#1a2e1a] border border-emerald-500/30 p-6 text-center">
+              <p className="text-lg font-bold text-white mb-2">Start Workout?</p>
+              <p className="text-sm text-white/60 mb-6">You need to start the workout before checking off exercises.</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setPendingToggle(null)}
+                  className="flex-1 py-3 rounded-xl bg-white/10 text-white/80 font-medium hover:bg-white/20 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setWorkoutStarted(true)
+                    // Persist started state
+                    const workoutState = {
+                      currentDay, weekType, phase, programWeek,
+                      workoutExercises, workoutStartTime: new Date().toISOString(),
+                      workoutNotes, elapsed: workoutElapsed, started: true,
+                    }
+                    localStorage.setItem(`hangfit_workout_${currentDay}_${weekType}`, JSON.stringify(workoutState))
+                    setPendingToggle(null)
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-colors"
+                >
+                  Start Workout
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Rest Timer Overlay */}
         {showRestTimer && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
@@ -1385,6 +1461,10 @@ export default function WorkoutPage() {
                 <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
                   <button
                     onClick={() => {
+                      if (!workoutStarted) {
+                        setPendingToggle({ type: 'warmup', setIndex: i })
+                        return
+                      }
                       const updated = [...warmUpComplete]
                       updated[i] = !updated[i]
                       setWarmUpComplete(updated)
@@ -1498,6 +1578,10 @@ export default function WorkoutPage() {
                   <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
                     <button
                       onClick={() => {
+                        if (!workoutStarted) {
+                          setPendingToggle({ type: 'mobility', setIndex: i })
+                          return
+                        }
                         const updated = [...mobilityComplete]
                         updated[i] = !updated[i]
                         setMobilityComplete(updated)
@@ -1694,35 +1778,7 @@ export default function WorkoutPage() {
           )}
         </div>
 
-        {/* Jump Back In — only for abandoned sessions */}
-        {savedWorkoutKey && !justCompleted && (
-          <button
-            onClick={() => {
-              try {
-                const saved = localStorage.getItem(savedWorkoutKey)
-                if (!saved) return
-                const parsed = JSON.parse(saved)
-                setCurrentDay(parsed.currentDay)
-                setWeekType(parsed.weekType)
-                setPhase(parsed.phase)
-                setProgramWeek(parsed.programWeek)
-                setWorkoutExercises(parsed.workoutExercises)
-                setWorkoutNotes(parsed.workoutNotes || '')
-                setWorkoutStartTime(parsed.workoutStartTime ? new Date(parsed.workoutStartTime) : new Date())
-                setWorkoutElapsed(parsed.elapsed || 0)
-                setTimerRunning(false)
-                setWorkoutActive(true)
-                setWorkoutNotes(parsed.workoutNotes || '')
-                setWorkoutStarted(parsed.started ?? true)
-              } catch {}
-            }}
-            className="w-full py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-semibold text-sm hover:bg-emerald-500/20 transition-colors flex items-center justify-center gap-2"
-          >
-            <Zap className="w-4 h-4" /> Jump Back In
-          </button>
-        )}
 
-        {/* 5-Day Program Grid */}
         <div className="space-y-2">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Hybrid Program — 5 Days</h3>
           <div className="flex flex-col gap-2">
