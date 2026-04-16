@@ -1710,8 +1710,21 @@ export default function WorkoutPage() {
           </div>
         </div>
 
-        {/* Jump Back In */}
-        {savedWorkoutKey && (
+        {/* Jump Back In — only if saved workout is from today (not a previous day) */}
+        {savedWorkoutKey && (() => {
+          try {
+            const saved = localStorage.getItem(savedWorkoutKey)
+            if (!saved) return false
+            const parsed = JSON.parse(saved)
+            if (!parsed?.workoutStartTime) return false
+            const savedDate = new Date(parsed.workoutStartTime)
+            const today = new Date()
+            const isSameDay = savedDate.getFullYear() === today.getFullYear() &&
+              savedDate.getMonth() === today.getMonth() &&
+              savedDate.getDate() === today.getDate()
+            return isSameDay
+          } catch { return false }
+        })() && (
           <button
             onClick={() => {
               try {
