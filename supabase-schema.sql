@@ -120,6 +120,7 @@ CREATE TABLE IF NOT EXISTS workout_sets (
   set_number INTEGER NOT NULL,
   weight DECIMAL(6, 2) NOT NULL DEFAULT 0,
   reps INTEGER NOT NULL DEFAULT 0,
+  is_time_based BOOLEAN NOT NULL DEFAULT false,
   completed BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

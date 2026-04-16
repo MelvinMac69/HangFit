@@ -161,6 +161,8 @@ function InlineRestTimer({ onSkip, label }: { onSkip: () => void; label?: string
 // ============================================================
 // WORK TIMER — tap-to-start timer for time-based exercises
 // ============================================================
+// WORK TIMER — tap-to-start timer for time-based exercises
+// ============================================================
 function WorkTimer({
   duration,
   onDone,
@@ -169,10 +171,27 @@ function WorkTimer({
   onDone: () => void
 }) {
   const endTimeRef = React.useRef<number | null>(null)
+  const [countdown, setCountdown] = React.useState(5) // 5-second countdown before starting
+  const [countdownActive, setCountdownActive] = React.useState(false)
   const [remaining, setRemaining] = React.useState(duration)
   const [running, setRunning] = React.useState(false)
   const onDoneRef = React.useRef(onDone)
   React.useEffect(() => { onDoneRef.current = onDone }, [onDone])
+
+  // 5-second countdown before work timer starts
+  React.useEffect(() => {
+    if (!countdownActive) return
+    if (countdown <= 0) {
+      setCountdownActive(false)
+      setRunning(true)
+      return
+    }
+    const id = setTimeout(() => {
+      setCountdown(c => c - 1)
+    }, 1000)
+    return () => clearTimeout(id)
+  }, [countdownActive, countdown])
+
 
   React.useEffect(() => {
     if (!running) return
@@ -193,28 +212,44 @@ function WorkTimer({
 
   const progress = ((duration - remaining) / duration) * 100
 
+  if (countdownActive) {
+    return (
+      <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-orange-500/20 border-2 border-orange-500/50">
+        <span className="text-6xl font-bold text-orange-400 font-mono leading-none">
+          {countdown}
+        </span>
+        <span className="text-xs text-orange-300 mt-1">Get ready…</span>
+      </div>
+    )
+  }
+
   if (!running && remaining === duration) {
     return (
       <button
-        onClick={() => setRunning(true)}
-        className="px-4 py-2 rounded-lg bg-orange-500/20 border border-orange-500/40 text-orange-400 text-sm font-medium hover:bg-orange-500/30 transition-colors"
+        onClick={() => {
+          setCountdown(5)
+          setCountdownActive(true)
+        }}
+        className="w-full py-3 rounded-xl bg-orange-500/20 border-2 border-orange-500/40 text-orange-400 text-center text-sm font-semibold hover:bg-orange-500/30 transition-colors"
       >
-        ⏱ Tap to start ({duration}s)
+        ⏱ START — {duration}s
       </button>
     )
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-2 bg-orange-500/10 rounded-full overflow-hidden">
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-center">
+        <span className="text-4xl font-bold text-orange-400 font-mono">
+          {Math.floor(remaining / 60)}:{(remaining % 60).toString().padStart(2, '0')}
+        </span>
+      </div>
+      <div className="h-3 bg-orange-500/10 rounded-full overflow-hidden">
         <div
           className="h-full bg-orange-500 rounded-full transition-all duration-100"
           style={{ width: `${progress}%` }}
         />
       </div>
-      <span className="text-sm font-medium text-orange-400 w-12 text-right">
-        {Math.floor(remaining / 60)}:{(remaining % 60).toString().padStart(2, '0')}
-      </span>
     </div>
   )
 }
@@ -234,8 +269,23 @@ function EMOMTimer({
   const [remaining, setRemaining] = React.useState(totalSeconds)
   const [running, setRunning] = React.useState(false)
   const [minuteMark, setMinuteMark] = React.useState(totalSeconds)
+  const [countdown, setCountdown] = React.useState(5)
+  const [countdownActive, setCountdownActive] = React.useState(false)
   const onDoneRef = React.useRef(onDone)
   React.useEffect(() => { onDoneRef.current = onDone }, [onDone])
+
+  // 5-second countdown before EMOM starts
+  React.useEffect(() => {
+    if (!countdownActive) return
+    if (countdown <= 0) {
+      setCountdownActive(false)
+      setRunning(true)
+      return
+    }
+    const id = setTimeout(() => setCountdown(c => c - 1), 1000)
+    return () => clearTimeout(id)
+  }, [countdownActive, countdown])
+
 
   React.useEffect(() => {
     if (!running) return
@@ -249,7 +299,6 @@ function EMOMTimer({
       const nextMark = Math.floor((endTimeRef.current - Date.now()) / 1000 / 60) * 60
       if (nextMark < minuteMark && nextMark >= 0) {
         setMinuteMark(nextMark)
-        // Audio chime via Web Audio API
         try {
           const ctx = new AudioContext()
           const osc = ctx.createOscillator()
@@ -275,33 +324,55 @@ function EMOMTimer({
 
   const progress = ((totalSeconds - remaining) / totalSeconds) * 100
   const minutesLeft = Math.ceil(remaining / 60)
+  const currentRound = totalMinutes - minutesLeft + 1
 
-  if (!running) {
+  // 5-second countdown overlay
+  if (countdownActive) {
+    return (
+      <div className="flex flex-col items-center justify-center p-6 rounded-xl bg-orange-500/20 border-2 border-orange-500/50">
+        <span className="text-7xl font-bold text-orange-400 font-mono leading-none">
+          {countdown}
+        </span>
+        <span className="text-sm text-orange-300 mt-2">Get ready — {totalMinutes} min EMOM</span>
+      </div>
+    )
+  }
+
+  if (!running && remaining === totalSeconds) {
     return (
       <button
-        onClick={() => setRunning(true)}
-        className="px-4 py-2 rounded-lg bg-orange-500/20 border border-orange-500/40 text-orange-400 text-sm font-medium hover:bg-orange-500/30 transition-colors"
+        onClick={() => {
+          setCountdown(5)
+          setCountdownActive(true)
+        }}
+        className="w-full py-4 rounded-xl bg-orange-500/20 border-2 border-orange-500/40 text-orange-400 text-center text-base font-bold hover:bg-orange-500/30 transition-colors"
       >
-        ⏱ EMOM {totalMinutes}min — Tap to start
+        ⏱ START — {totalMinutes}-min EMOM (10 rounds × 60s)
       </button>
     )
   }
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-orange-400">
-          {minutesLeft > 1 ? `${minutesLeft} min remaining` : 'Final minute!'}
-        </span>
-        <span className="text-xs text-muted-foreground">
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-center">
+        <span className="text-5xl font-bold text-orange-400 font-mono">
           {Math.floor(remaining / 60)}:{(remaining % 60).toString().padStart(2, '0')}
         </span>
       </div>
-      <div className="h-2 bg-orange-500/10 rounded-full overflow-hidden">
+      <div className="text-center">
+        <span className="text-2xl font-bold text-white">
+          Round {Math.min(currentRound, totalMinutes)}/{totalMinutes}
+        </span>
+      </div>
+      <div className="h-3 bg-orange-500/10 rounded-full overflow-hidden">
         <div
           className="h-full bg-orange-500 rounded-full transition-all duration-100"
           style={{ width: `${progress}%` }}
         />
+      </div>
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>{minutesLeft > 1 ? `${minutesLeft} min remaining` : 'Final minute!'}</span>
+        <span>20 swings / round</span>
       </div>
     </div>
   )
@@ -534,12 +605,28 @@ function ExerciseCard({
         <div className="px-4 pb-4 space-y-2">
           {/* EMOM Timer for interval-based exercises (e.g. KB swings) */}
           {isEMOM && (
-            <div className="mb-3 p-3 rounded-lg bg-orange-500/10 border border-orange-500/30">
-              <p className="text-xs text-orange-400 font-semibold mb-2">10-min EMOM — 20 swings/min</p>
+            <div className="mb-3 rounded-xl bg-orange-500/10 border-2 border-orange-500/40 p-4">
+              <p className="text-sm text-orange-300 font-semibold mb-3 text-center">10-min EMOM — 20 swings/min</p>
               <EMOMTimer
                 totalMinutes={10}
                 onDone={() => {
-                  // Mark all sets complete when EMOM ends
+                  sets.forEach((_, i) => {
+                    if (!sets[i].completed) {
+                      setLocalCompleted(prev => ({ ...prev, [i]: true }))
+                      handleToggle(i)
+                    }
+                  })
+                }}
+              />
+            </div>
+          )}
+
+          {/* Time-based exercises: show WorkTimer instead of weight/rep inputs */}
+          {isTimeBased && !isEMOM && (
+            <div className="mb-3 rounded-xl bg-orange-500/10 border-2 border-orange-500/40 p-4">
+              <WorkTimer
+                duration={typeof sets[0]?.reps === 'number' ? sets[0].reps : parseInt(sets[0]?.reps as string) || 30}
+                onDone={() => {
                   sets.forEach((_, i) => {
                     if (!sets[i].completed) {
                       setLocalCompleted(prev => ({ ...prev, [i]: true }))
@@ -559,35 +646,48 @@ function ExerciseCard({
                   : 'bg-white/5 border-white/10'
               }`}>
                 <span className={`text-xs font-medium w-8 ${set.completed ? 'text-emerald-400' : 'text-muted-foreground'}`}>Set {i + 1}</span>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={set.weight || ''}
-                  onChange={(e) => onUpdateSet(i, parseFloat(e.target.value) || 0, typeof set.reps === 'number' ? set.reps : 0)}
-                  placeholder="0"
-                  className={`w-20 px-3 py-2 rounded-lg border text-center font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors ${
-                    set.completed
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-white'
-                      : 'bg-white/5 border-white/10'
-                  }`}
-                />
-                <span className={set.completed ? 'text-emerald-400' : 'text-muted-foreground'}>lbs</span>
-                <span className={set.completed ? 'text-emerald-400 mx-1' : 'text-muted-foreground mx-1'}>×</span>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={set.reps || ''}
-                  onChange={(e) => onUpdateSet(i, set.weight || 0, parseInt(e.target.value) || 0)}
-                  placeholder={targetReps.min.toString()}
-                  className={`w-16 px-3 py-2 rounded-lg border text-center font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors ${
-                    set.completed
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-white'
-                      : 'bg-white/5 border-white/10'
-                  }`}
-                />
-                <span className={`text-xs transition-colors ${set.completed ? 'text-emerald-400' : 'text-muted-foreground'}`}>
-                  ({targetReps.min}-{targetReps.max})
-                </span>
+                {!isTimeBased && (
+                  <>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={set.weight || ''}
+                      onChange={(e) => onUpdateSet(i, parseFloat(e.target.value) || 0, typeof set.reps === 'number' ? set.reps : 0)}
+                      placeholder="0"
+                      className={`w-20 px-3 py-2 rounded-lg border text-center font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors ${
+                        set.completed
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-white'
+                          : 'bg-white/5 border-white/10'
+                      }`}
+                    />
+                    <span className={set.completed ? 'text-emerald-400' : 'text-muted-foreground'}>lbs</span>
+                    <span className={set.completed ? 'text-emerald-400 mx-1' : 'text-muted-foreground mx-1'}>×</span>
+                  </>
+                )}
+                {isTimeBased ? (
+                  <span className="text-sm text-orange-400 font-medium flex-1 text-center">⏱ Timed</span>
+                ) : (
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={set.reps || ''}
+                    onChange={(e) => onUpdateSet(i, set.weight || 0, parseInt(e.target.value) || 0)}
+                    placeholder={targetReps.min.toString()}
+                    className={`w-16 px-3 py-2 rounded-lg border text-center font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors ${
+                      set.completed
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-white'
+                        : 'bg-white/5 border-white/10'
+                    }`}
+                  />
+                )}
+                {isTimeBased && (
+                  <span className="text-xs text-orange-400/70 flex-1 text-center">({typeof sets[0]?.reps === 'number' ? sets[0].reps : parseInt(sets[0]?.reps as string) || 30}s)</span>
+                )}
+                {!isTimeBased && (
+                  <span className={`text-xs transition-colors ${set.completed ? 'text-emerald-400' : 'text-muted-foreground'}`}>
+                    ({targetReps.min}-{targetReps.max})
+                  </span>
+                )}
                 <div className="flex-1" />
                 <button
                   onClick={() => {
@@ -722,25 +822,39 @@ function SupersetCard({
                             </button>
                           )}
                         </div>
-                        <div className={`flex items-center gap-1 p-1.5 rounded-lg border ${isComplete ? 'bg-emerald-500/15 border-emerald-500/50' : 'bg-white/5 border-white/10'}`}>
-                          <input
-                            type="number"
-                            inputMode="decimal"
-                            placeholder="0"
-                            value={typeof set?.weight === 'number' ? set.weight : ''}
-                            onChange={(e) => onUpdateSet(baseIndex + exIdx, setIndex, parseFloat(e.target.value) || 0, typeof set?.reps === 'number' ? set.reps : 0)}
-                            className="w-12 px-1 py-1 rounded bg-white/5 border border-white/10 text-center text-xs font-medium focus:outline-none focus:ring-1 focus:ring-orange-500/50"
-                          />
-                          <span className="text-muted-foreground text-[10px]">×</span>
-                          <input
-                            type="number"
-                            inputMode="numeric"
-                            placeholder={targetReps.min.toString()}
-                            value={typeof set?.reps === 'number' ? set.reps : ''}
-                            onChange={(e) => onUpdateSet(baseIndex + exIdx, setIndex, typeof set?.weight === 'number' ? set.weight : 0, parseInt(e.target.value) || 0)}
-                            disabled={exData?.isTimeBased}
-                            className="w-10 px-1 py-1 rounded bg-white/5 border border-white/10 text-center text-xs font-medium focus:outline-none focus:ring-1 focus:ring-orange-500/50"
-                          />
+                        <div className={`flex flex-col items-center justify-center p-2 rounded-lg border ${isComplete ? 'bg-emerald-500/15 border-emerald-500/50' : 'bg-orange-500/10 border-orange-500/30'}`}>
+                          {exData?.isTimeBased ? (
+                            <WorkTimer
+                              duration={typeof set?.reps === 'number' ? set.reps : parseInt(set?.reps as string) || 30}
+                              onDone={() => {
+                                if (!isComplete) {
+                                  onToggleSet(baseIndex + exIdx, setIndex)
+                                  setShowRestForSet({ ex: exIdx, set: setIndex })
+                                }
+                              }}
+                            />
+                          ) : (
+                            <>
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                placeholder="0"
+                                value={typeof set?.weight === 'number' ? set.weight : ''}
+                                onChange={(e) => onUpdateSet(baseIndex + exIdx, setIndex, parseFloat(e.target.value) || 0, typeof set?.reps === 'number' ? set.reps : 0)}
+                                className="w-12 px-1 py-1 rounded bg-white/5 border border-white/10 text-center text-xs font-medium focus:outline-none focus:ring-1 focus:ring-orange-500/50"
+                              />
+                              <span className="text-muted-foreground text-[10px]">×</span>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                placeholder={targetReps.min.toString()}
+                                value={typeof set?.reps === 'number' ? set.reps : ''}
+                                onChange={(e) => onUpdateSet(baseIndex + exIdx, setIndex, typeof set?.weight === 'number' ? set.weight : 0, parseInt(e.target.value) || 0)}
+                                disabled={exData?.isTimeBased}
+                                className="w-10 px-1 py-1 rounded bg-white/5 border border-white/10 text-center text-xs font-medium focus:outline-none focus:ring-1 focus:ring-orange-500/50"
+                              />
+                            </>
+                          )}
                           <button
                             onClick={() => {
                               if (!isComplete) {
@@ -748,7 +862,7 @@ function SupersetCard({
                                 setShowRestForSet({ ex: exIdx, set: setIndex })
                               }
                             }}
-                            className={`ml-auto p-1 rounded transition-colors shrink-0 ${isComplete ? 'bg-emerald-500 text-white' : 'bg-white/10 hover:bg-white/20'}`}
+                            className={`mt-1 p-1 rounded transition-colors shrink-0 ${isComplete ? 'bg-emerald-500 text-white' : 'bg-white/10 hover:bg-white/20'}`}
                           >
                             <Check className="w-3 h-3" />
                           </button>
@@ -1282,6 +1396,7 @@ export default function WorkoutPage() {
           weight: s.weight,
           reps: typeof s.reps === 'number' ? s.reps : parseInt(s.reps as string) || 0,
           completed: s.completed,
+          is_time_based: typeof s.reps === 'number' && typeof s.weight === 'number' && s.weight === 0,
         }))
 
         await supabase.from('workout_sets').insert(setsToInsert)
