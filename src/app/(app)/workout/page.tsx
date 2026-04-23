@@ -1170,9 +1170,9 @@ export default function WorkoutPage() {
         // Step 1: Get most recent workout_exercises IDs for each exercise name
         const { data: lastExercises, error: exErr } = await supabase
           .from('workout_exercises')
-          .select('id, exercise_id, exercise_name, created_at')
+          .select('id, exercise_id, exercise_name')
           .in('exercise_name', exerciseNames)
-          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
           .limit(50)
 
         if (exErr) {
@@ -1188,7 +1188,7 @@ export default function WorkoutPage() {
             .from('workout_sets')
             .select('workout_exercise_id, weight')
             .in('workout_exercise_id', exerciseIds)
-            .order('created_at', { ascending: false })
+            .order('id', { ascending: false })
 
           if (setsErr) {
             console.error('[HangFit] Error fetching sets:', setsErr)
