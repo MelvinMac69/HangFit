@@ -1168,7 +1168,7 @@ export default function WorkoutPage() {
         // Get most recent workout for each exercise
         const { data: lastExercises } = await supabase
           .from('workout_exercises')
-          .select('exercise_id, workout_sets(weight)')
+          .select('exercise_id, exercise_name, workout_sets(weight)')
           .in('exercise_name', day.exercises.map(ex => ex.name))
           .order('created_at', { ascending: false })
           .limit(50)
