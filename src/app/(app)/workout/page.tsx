@@ -1206,7 +1206,8 @@ export default function WorkoutPage() {
             const weId = s.workout_exercise_id as string
             if (!setsByWeId[weId]) setsByWeId[weId] = { weights: [], reps: [] }
             if (s.weight > 0) setsByWeId[weId].weights.push(s.weight as number)
-            if (typeof s.reps === 'number' && s.reps > 0) setsByWeId[weId].reps.push(s.reps as number)
+            const repsVal = typeof s.reps === 'number' ? s.reps : parseInt(String(s.reps) || '0')
+            if (repsVal >= 0) setsByWeId[weId].reps.push(repsVal)
           }
 
           // Step 3: Map exercise_name → weight + last set's reps
