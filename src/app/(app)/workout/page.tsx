@@ -1165,27 +1165,59 @@ export default function WorkoutPage() {
     let lastWeights: Record<string, number> = {}
     if (supabase && user) {
       try {
-        // Get most recent workout for each exercise
-        const { data: lastExercises } = await supabase
+        const exerciseNames = day.exercises.map(ex => ex.name)
+
+        // Step 1: Get most recent workout_exercises IDs for each exercise name
+        const { data: lastExercises, error: exErr } = await supabase
           .from('workout_exercises')
-          .select('exercise_id, exercise_name, workout_sets(weight)')
-          .in('exercise_name', day.exercises.map(ex => ex.name))
+          .select('id, exercise_id, exercise_name, created_at')
+          .in('exercise_name', exerciseNames)
           .order('created_at', { ascending: false })
           .limit(50)
 
-        // Group by exercise_name and take most recent weight per exercise
-        const seen = new Set<string>()
-        for (const row of (lastExercises || [])) {
-          const ename = row.exercise_name as string
-          if (seen.has(ename)) continue
-          seen.add(ename)
-          const sets = row.workout_sets as any[]
-          if (sets && sets.length > 0) {
-            const avgWeight = Math.round(sets.reduce((acc: number, s: any) => acc + (s.weight || 0), 0) / sets.length)
-            if (avgWeight > 0) lastWeights[ename] = avgWeight
-          }
+        if (exErr) {
+          console.error('[HangFit] Error fetching exercise history:', exErr)
         }
-        console.log('[HangFit] Autofill for', day.label, '— exercise names:', [...seen], '→ weights:', JSON.stringify(lastWeights))
+
+        if (lastExercises && lastExercises.length > 0) {
+          // Step 2: Get all recent exercise IDs
+          const exerciseIds = lastExercises.map(we => we.id)
+
+          // Step 3: Fetch sets for those exercises (avoiding nested RLS join)
+          const { data: allSets, error: setsErr } = await supabase
+            .from('workout_sets')
+            .select('workout_exercise_id, weight')
+            .in('workout_exercise_id', exerciseIds)
+            .order('created_at', { ascending: false })
+
+          if (setsErr) {
+            console.error('[HangFit] Error fetching sets:', setsErr)
+          }
+
+          // Group sets by workout_exercise_id
+          const setsByExerciseId: Record<string, number[]> = {}
+          for (const s of (allSets || [])) {
+            const weId = s.workout_exercise_id as string
+            if (!setsByExerciseId[weId]) setsByExerciseId[weId] = []
+            if (s.weight > 0) setsByExerciseId[weId].push(s.weight as number)
+          }
+
+          // Step 4: Map exercise_name → latest avg weight
+          const seen = new Set<string>()
+          for (const we of lastExercises) {
+            const ename = we.exercise_name as string
+            if (seen.has(ename)) continue
+            seen.add(ename)
+            const weights = setsByExerciseId[we.id] || []
+            if (weights.length > 0) {
+              const avgWeight = Math.round(weights.reduce((a, b) => a + b, 0) / weights.length)
+              lastWeights[ename] = avgWeight
+            }
+          }
+          console.log('[HangFit] Autofill for', day.label, '— exercise names:', [...seen], '→ weights:', JSON.stringify(lastWeights))
+        } else {
+          console.log('[HangFit] Autofill for', day.label, '— no history found, lastExercises:', lastExercises?.length ?? 'null', 'error:', exErr?.message ?? 'none')
+        }
       } catch (e) {
         console.error('Error fetching last weights:', e)
       }
