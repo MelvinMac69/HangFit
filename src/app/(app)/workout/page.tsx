@@ -1161,8 +1161,8 @@ export default function WorkoutPage() {
       }
     }
 
-    // No saved workout — fetch last session weights from Supabase
-    let lastWeights: Record<string, number> = {}
+    // No saved workout — fetch last session weights and reps from Supabase
+    let lastData: Record<string, { weight: number; reps: number }> = {}
     if (supabase && user) {
       try {
         const exerciseNames = day.exercises.map(ex => ex.name)
@@ -1186,7 +1186,7 @@ export default function WorkoutPage() {
           // Step 3: Fetch sets for those exercises (avoiding nested RLS join)
           const { data: allSets, error: setsErr } = await supabase
             .from('workout_sets')
-            .select('workout_exercise_id, weight')
+            .select('workout_exercise_id, weight, reps')
             .in('workout_exercise_id', exerciseIds)
             .order('id', { ascending: false })
 
@@ -1194,27 +1194,34 @@ export default function WorkoutPage() {
             console.error('[HangFit] Error fetching sets:', setsErr)
           }
 
-          // Group sets by workout_exercise_id
-          const setsByExerciseId: Record<string, number[]> = {}
+          // Group sets by workout_exercise_id — track weight and reps separately
+          const setsByExerciseId: Record<string, { weights: number[]; reps: number[] }> = {}
           for (const s of (allSets || [])) {
             const weId = s.workout_exercise_id as string
-            if (!setsByExerciseId[weId]) setsByExerciseId[weId] = []
-            if (s.weight > 0) setsByExerciseId[weId].push(s.weight as number)
+            if (!setsByExerciseId[weId]) setsByExerciseId[weId] = { weights: [], reps: [] }
+            if (s.weight > 0) setsByExerciseId[weId].weights.push(s.weight as number)
+            if (typeof s.reps === 'number' && s.reps > 0) setsByExerciseId[weId].reps.push(s.reps as number)
           }
 
-          // Step 4: Map exercise_name → latest avg weight
+          // Step 4: Map exercise_name → latest avg weight and last reps (from most recent set)
           const seen = new Set<string>()
           for (const we of lastExercises) {
             const ename = we.exercise_name as string
             if (seen.has(ename)) continue
             seen.add(ename)
-            const weights = setsByExerciseId[we.id] || []
-            if (weights.length > 0) {
-              const avgWeight = Math.round(weights.reduce((a, b) => a + b, 0) / weights.length)
-              lastWeights[ename] = avgWeight
+            const data = setsByExerciseId[we.id]
+            if (data) {
+              const avgWeight = data.weights.length > 0
+                ? Math.round(data.weights.reduce((a, b) => a + b, 0) / data.weights.length)
+                : 0
+              // Use the most recent reps (first in list = most recent due to id ordering)
+              const lastReps = data.reps.length > 0 ? data.reps[0] : 0
+              if (avgWeight > 0 || lastReps > 0) {
+                lastData[ename] = { weight: avgWeight, reps: lastReps }
+              }
             }
           }
-          console.log('[HangFit] Autofill for', day.label, '— exercise names:', [...seen], '→ weights:', JSON.stringify(lastWeights))
+          console.log('[HangFit] Autofill for', day.label, '— exercise names:', [...seen], '→ data:', JSON.stringify(lastData))
         } else {
           console.log('[HangFit] Autofill for', day.label, '— no history found, lastExercises:', lastExercises?.length ?? 'null', 'error:', exErr?.message ?? 'none')
         }
@@ -1227,18 +1234,19 @@ export default function WorkoutPage() {
     const exercises = day.exercises.map((ex, i) => {
       const progEx = EXERCISES[ex.id]
       const targetReps = getTargetReps(phase, ex.category)
-      const lastWeight = lastWeights[ex.name] || 0
-      console.log('[HangFit]   ', ex.name, '→ lastWeight:', lastWeight, '| lastWeights keys:', Object.keys(lastWeights))
+      const lastWeight = lastData[ex.name]?.weight || 0
+      const lastReps = lastData[ex.name]?.reps || 0
+      console.log('[HangFit]   ', ex.name, '→ lastWeight:', lastWeight, 'lastReps:', lastReps)
       const useWeight = lastWeight > 0 ? lastWeight : 0
       const isTime = progEx?.isTimeBased ?? false
-      const defaultReps = isTime ? (progEx?.duration ?? 30) : targetReps.min
+      const useReps = lastReps > 0 ? lastReps : (isTime ? (progEx?.duration ?? 30) : targetReps.min)
       return {
         exerciseId: ex.id,
         exerciseName: ex.name,
         sets: [
-          { id: genId(), weight: useWeight, reps: defaultReps, completed: false },
-          { id: genId(), weight: useWeight, reps: defaultReps, completed: false },
-          { id: genId(), weight: useWeight, reps: defaultReps, completed: false },
+          { id: genId(), weight: useWeight, reps: useReps, completed: false },
+          { id: genId(), weight: useWeight, reps: useReps, completed: false },
+          { id: genId(), weight: useWeight, reps: useReps, completed: false },
         ],
         supersetGroup: (ex as any).supersetGroup,
       }
