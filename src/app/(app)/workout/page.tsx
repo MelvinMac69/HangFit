@@ -1161,70 +1161,86 @@ export default function WorkoutPage() {
       }
     }
 
-    // No saved workout — fetch last session weights and reps from Supabase
+        // No saved workout — fetch last session weights and reps from Supabase
+    // Key fix: order by workout_log.created_at (actual workout date), not workout_exercises.id
     let lastData: Record<string, { weight: number; reps: number }> = {}
     if (supabase && user) {
       try {
         const exerciseNames = day.exercises.map(ex => ex.name)
 
-        // Step 1: Get the most recent workout_exercises entry per exercise_name
-        // (id is monotonically increasing with each new entry, so higher id = more recent)
-        const { data: allExercises, error: exErr } = await supabase
-          .from('workout_exercises')
-          .select('id, exercise_name')
-          .in('exercise_name', exerciseNames)
-          .order('id', { ascending: false })
+        // Step 1: get recent workout_log IDs ordered by actual date (most recent first)
+        const { data: recentLogs } = await supabase
+          .from('workout_logs')
+          .select('id, created_at')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(20)
 
-        if (exErr) {
-          console.error('[HangFit] Error fetching exercise history:', exErr)
-        }
-
-        if (allExercises && allExercises.length > 0) {
-          // Deduplicate: keep only the first (most recent) entry per exercise_name
-          const mostRecentByExercise: Record<string, string> = {}
-          for (const we of allExercises) {
-            if (!mostRecentByExercise[we.exercise_name]) {
-              mostRecentByExercise[we.exercise_name] = we.id
-            }
-          }
-
-          // Step 2: Fetch all sets for those specific workout_exercises entries
-          const recentWeIds = Object.values(mostRecentByExercise)
-          const { data: allSets, error: setsErr } = await supabase
-            .from('workout_sets')
-            .select('workout_exercise_id, weight, reps, set_number')
-            .in('workout_exercise_id', recentWeIds)
-            .order('set_number', { ascending: true })
-
-          if (setsErr) {
-            console.error('[HangFit] Error fetching sets:', setsErr)
-          }
-
-          // Group sets by workout_exercise_id
-          const setsByWeId: Record<string, { weights: number[]; reps: number[] }> = {}
-          for (const s of (allSets || [])) {
-            const weId = s.workout_exercise_id as string
-            if (!setsByWeId[weId]) setsByWeId[weId] = { weights: [], reps: [] }
-            if (s.weight > 0) setsByWeId[weId].weights.push(s.weight as number)
-            const repsVal = typeof s.reps === 'number' ? s.reps : parseInt(String(s.reps) || '0')
-            if (repsVal >= 0) setsByWeId[weId].reps.push(repsVal)
-          }
-
-          // Step 3: Map exercise_name → weight + last set's reps
-          for (const [ename, weId] of Object.entries(mostRecentByExercise)) {
-            const data = setsByWeId[weId]
-            if (data && data.weights.length > 0) {
-              const avgWeight = Math.round(data.weights.reduce((a, b) => a + b, 0) / data.weights.length)
-              const lastReps = data.reps.length > 0 ? data.reps[data.reps.length - 1] : 0
-              lastData[ename] = { weight: avgWeight, reps: lastReps }
-            }
-          }
-
-          console.log('[HangFit] Autofill for', day.label, '— mostRecentByExercise:', JSON.stringify(mostRecentByExercise))
-          console.log('[HangFit] Autofill for', day.label, '→ data:', JSON.stringify(lastData))
+        if (!recentLogs || recentLogs.length === 0) {
+          console.log('[HangFit] Autofill — no workout_logs found')
         } else {
-          console.log('[HangFit] Autofill for', day.label, '— no history found, allExercises:', allExercises?.length ?? 'null', 'error:', exErr?.message ?? 'none')
+          const logIds = recentLogs.map(l => l.id)
+
+          // Step 2: get workout_exercises for recent logs, filtered to today's exercises
+          const { data: allExercises, error: exErr } = await supabase
+            .from('workout_exercises')
+            .select('id, exercise_name, workout_log_id')
+            .in('workout_log_id', logIds)
+            .in('exercise_name', exerciseNames)
+
+          if (exErr) {
+            console.error('[HangFit] Error fetching exercises:', exErr)
+          }
+
+          if (allExercises && allExercises.length > 0) {
+            const weIds = allExercises.map(e => e.id)
+
+            // Step 3: get all sets for those workout_exercises
+            const { data: allSets, error: setsErr } = await supabase
+              .from('workout_sets')
+              .select('workout_exercise_id, weight, reps, set_number')
+              .in('workout_exercise_id', weIds)
+              .order('set_number', { ascending: true })
+
+            if (setsErr) {
+              console.error('[HangFit] Error fetching sets:', setsErr)
+            }
+
+            // Build lookup: workout_exercise_id → sets
+            const setsByWeId: Record<string, { weights: number[]; reps: number[] }> = {}
+            for (const s of (allSets || [])) {
+              const weId = s.workout_exercise_id as string
+              if (!setsByWeId[weId]) setsByWeId[weId] = { weights: [], reps: [] }
+              if (s.weight > 0) setsByWeId[weId].weights.push(s.weight as number)
+              const repsVal = typeof s.reps === 'number' ? s.reps : parseInt(String(s.reps) || '0')
+              if (repsVal >= 0) setsByWeId[weId].reps.push(repsVal)
+            }
+
+            // Step 4: for each exercise, use the first workout_log (most recent) that has it
+            const seen = new Set<string>()
+            for (const log of recentLogs) {
+              if (seen.size === exerciseNames.length) break
+              const logExercises = allExercises.filter(e => e.workout_log_id === log.id)
+              for (const we of logExercises) {
+                const ename = we.exercise_name as string
+                if (seen.has(ename)) continue
+                seen.add(ename)
+                const data = setsByWeId[we.id]
+                if (data) {
+                  const avgWeight = data.weights.length > 0
+                    ? Math.round(data.weights.reduce((a, b) => a + b, 0) / data.weights.length)
+                    : 0
+                  const lastReps = data.reps.length > 0 ? data.reps[data.reps.length - 1] : 0
+                  if (avgWeight > 0 || lastReps > 0) {
+                    lastData[ename] = { weight: avgWeight, reps: lastReps }
+                  }
+                }
+              }
+            }
+          }
         }
+
+        console.log('[HangFit] Autofill for', day.label, '→ data:', JSON.stringify(lastData))
       } catch (e) {
         console.error('Error fetching last weights/reps:', e)
       }
