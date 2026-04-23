@@ -1173,18 +1173,19 @@ export default function WorkoutPage() {
           .order('created_at', { ascending: false })
           .limit(50)
 
-        // Group by exercise_id and take most recent weight per exercise
+        // Group by exercise_name and take most recent weight per exercise
         const seen = new Set<string>()
         for (const row of (lastExercises || [])) {
-          const eid = row.exercise_id as string
-          if (seen.has(eid)) continue
-          seen.add(eid)
+          const ename = row.exercise_name as string
+          if (seen.has(ename)) continue
+          seen.add(ename)
           const sets = row.workout_sets as any[]
           if (sets && sets.length > 0) {
             const avgWeight = Math.round(sets.reduce((acc: number, s: any) => acc + (s.weight || 0), 0) / sets.length)
-            if (avgWeight > 0) lastWeights[eid] = avgWeight
+            if (avgWeight > 0) lastWeights[ename] = avgWeight
           }
         }
+        console.log('[HangFit] Autofill for', day.label, '— exercise names:', [...seen], '→ weights:', JSON.stringify(lastWeights))
       } catch (e) {
         console.error('Error fetching last weights:', e)
       }
@@ -1194,7 +1195,8 @@ export default function WorkoutPage() {
     const exercises = day.exercises.map((ex, i) => {
       const progEx = EXERCISES[ex.id]
       const targetReps = getTargetReps(phase, ex.category)
-      const lastWeight = lastWeights[ex.id] || 0
+      const lastWeight = lastWeights[ex.name] || 0
+      console.log('[HangFit]   ', ex.name, '→ lastWeight:', lastWeight, '| lastWeights keys:', Object.keys(lastWeights))
       const useWeight = lastWeight > 0 ? lastWeight : 0
       const isTime = progEx?.isTimeBased ?? false
       const defaultReps = isTime ? (progEx?.duration ?? 30) : targetReps.min
