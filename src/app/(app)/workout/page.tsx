@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@/lib/supabase'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { WORKOUT_PROGRAM, getDayLabel, getDayBgColor, getDayColor, calculateProgramPosition, getTargetReps } from '@/lib/workout-program'
+import { WORKOUT_PROGRAM, PROGRAM_VERSION, getDayLabel, getDayBgColor, getDayColor, calculateProgramPosition, getTargetReps } from '@/lib/workout-program'
 import { EXERCISES } from '@/lib/program-data'
 import { PHASE_LABELS, PHASE_COLORS } from '@/types/workout'
 import type { PhaseKey } from '@/types/workout'
@@ -1139,23 +1139,26 @@ export default function WorkoutPage() {
     const effectiveWt = wt ?? weekType
     const storageKey = `hangfit_workout_${dayNumber}_${effectiveWt}`
 
-    // Check for saved workout
+    // Check for saved workout (only if it matches current program version)
     const saved = localStorage.getItem(storageKey)
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
-        setWorkoutExercises(parsed.workoutExercises)
-        setWorkoutNotes(parsed.workoutNotes || '')
-        setWorkoutStartTime(parsed.workoutStartTime ? new Date(parsed.workoutStartTime) : new Date())
-        setWorkoutElapsed(parsed.elapsed || 0)
-        setTimerRunning(false)
-        setWarmUpComplete(new Array(day.warmUp.length).fill(false))
-        setWorkoutActive(true)
-        setCurrentExerciseIndex(0)
-        setShowDayPicker(false)
-        setSavedWorkoutKey(storageKey)
-        setWorkoutStarted(parsed.started ?? true) // they already started this workout
-        return
+        // Bust cache when program version changes
+        if (parsed.programVersion === PROGRAM_VERSION) {
+          setWorkoutExercises(parsed.workoutExercises)
+          setWorkoutNotes(parsed.workoutNotes || '')
+          setWorkoutStartTime(parsed.workoutStartTime ? new Date(parsed.workoutStartTime) : new Date())
+          setWorkoutElapsed(parsed.elapsed || 0)
+          setTimerRunning(false)
+          setWarmUpComplete(new Array(day.warmUp.length).fill(false))
+          setWorkoutActive(true)
+          setCurrentExerciseIndex(0)
+          setShowDayPicker(false)
+          setSavedWorkoutKey(storageKey)
+          setWorkoutStarted(parsed.started ?? true) // they already started this workout
+          return
+        }
       } catch {
         // Corrupt data, start fresh
       }
@@ -1310,6 +1313,7 @@ export default function WorkoutPage() {
         workoutNotes,
         elapsed: workoutElapsed,
         started: workoutStarted,
+        programVersion: PROGRAM_VERSION,
       }
       localStorage.setItem(`hangfit_workout_${currentDay}_${weekType}`, JSON.stringify(workoutState))
 
@@ -1344,6 +1348,7 @@ export default function WorkoutPage() {
         workoutStartTime: workoutStartTime?.toISOString(),
         workoutNotes,
         elapsed: workoutElapsed,
+        programVersion: PROGRAM_VERSION,
       }
       localStorage.setItem(`hangfit_workout_${currentDay}_${weekType}`, JSON.stringify(workoutState))
 
@@ -1537,6 +1542,7 @@ export default function WorkoutPage() {
                   currentDay, weekType, phase, programWeek,
                   workoutExercises, workoutStartTime: new Date().toISOString(),
                   workoutNotes, elapsed: workoutElapsed, started: true,
+                  programVersion: PROGRAM_VERSION,
                 }
                 localStorage.setItem(`hangfit_workout_${currentDay}_${weekType}`, JSON.stringify(workoutState))
               }}
@@ -1569,6 +1575,7 @@ export default function WorkoutPage() {
                       currentDay, weekType, phase, programWeek,
                       workoutExercises, workoutStartTime: new Date().toISOString(),
                       workoutNotes, elapsed: workoutElapsed, started: true,
+                      programVersion: PROGRAM_VERSION,
                     }
                     localStorage.setItem(`hangfit_workout_${currentDay}_${weekType}`, JSON.stringify(workoutState))
                     setPendingToggle(null)

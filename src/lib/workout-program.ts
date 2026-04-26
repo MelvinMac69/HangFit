@@ -5,6 +5,9 @@ import type { WorkoutDay } from '@/types/workout'
 // Eugene Tao Hybrid Style: Plyometrics → Power → Strength → Hypertrophy → Mobility → Cardio
 // ============================================================
 
+// Program version — bump to bust stale localStorage caches
+export const PROGRAM_VERSION = 2
+
 // Shared warm-up (all days)
 const WARM_UP = [
   { name: 'Jump Rope or March in Place', detail: '2 min' },
@@ -52,19 +55,19 @@ const FULLBODY_MOBILITY = [
 export const WORKOUT_PROGRAM: WorkoutDay[] = [
   // ============================================================
   // DAY 1: Lower A — Plyometrics → Power → Strength → Hypertrophy → Mobility
+  // Supersets: Broad Jumps+Box Jumps | Trap Bar Jump Squat+Zercher Squat
   // ============================================================
   {
     dayNumber: 1, label: 'Lower A',
     description: 'Plyometrics → Power → Strength → Hypertrophy → Mobility',
     type: 'lower', warmUp: WARM_UP,
     exercises: [
-      // Plyometrics
-      { id: 'broad-jumps', name: 'Broad Jumps', category: 'plyometric', customSets: 3, customReps: '5' },
-      { id: 'box-jumps', name: 'Box Jumps', category: 'plyometric', customSets: 3, customReps: '3' },
-      // Power
-      { id: 'trap-bar-jump-squat', name: 'Trap Bar Jump Squat', category: 'explosive', customSets: 4, customReps: '3' },
-      // Strength
-      { id: 'zercher-squat', name: 'Zercher Squat', category: 'compound', customSets: 3, customReps: '5' },
+      // Plyometrics superset
+      { id: 'broad-jumps', name: 'Broad Jumps', category: 'plyometric', customSets: 3, customReps: '5', supersetGroup: 'lower-a-ss1' },
+      { id: 'box-jumps', name: 'Box Jumps', category: 'plyometric', customSets: 3, customReps: '3', supersetGroup: 'lower-a-ss1' },
+      // Power superset
+      { id: 'trap-bar-jump-squat', name: 'Trap Bar Jump Squat', category: 'explosive', customSets: 4, customReps: '3', supersetGroup: 'lower-a-ss2' },
+      { id: 'zercher-squat', name: 'Zercher Squat', category: 'compound', customSets: 4, customReps: '5', supersetGroup: 'lower-a-ss2' },
       // Hypertrophy
       { id: 'ring-sissy-squat', name: 'Ring Sissy Squat', category: 'isolation', customSets: 2, customReps: '10' },
       { id: 'side-plank-clamshell', name: 'Side Plank Clamshell', category: 'isolation', customSets: 2, customReps: '10' },
@@ -74,20 +77,21 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
 
   // ============================================================
   // DAY 2: Upper A — Plyometrics → Power → Strength → Hypertrophy → Mobility
+  // Supersets: Med Ball Slams+Clap Push Up | Weighted Bar Dip+Ring Row
   // ============================================================
   {
     dayNumber: 2, label: 'Upper A',
     description: 'Plyometrics → Power → Strength → Hypertrophy → Mobility',
     type: 'upper', warmUp: WARM_UP,
     exercises: [
-      // Plyometrics
-      { id: 'medicine-ball-slams', name: 'Medicine Ball Slams', category: 'plyometric', customSets: 3, customReps: '8' },
-      { id: 'clap-push-up', name: 'Clap Push Up', category: 'plyometric', customSets: 3, customReps: '5' },
+      // Plyometrics superset
+      { id: 'medicine-ball-slams', name: 'Medicine Ball Slams', category: 'plyometric', customSets: 3, customReps: '8', supersetGroup: 'upper-a-ss1' },
+      { id: 'clap-push-up', name: 'Clap Push Up', category: 'plyometric', customSets: 3, customReps: '5', supersetGroup: 'upper-a-ss1' },
       // Power
       { id: 'kneeling-land-mine-press', name: 'Kneeling Land Mine Press', category: 'explosive', customSets: 3, customReps: '3 each arm' },
-      // Strength
-      { id: 'weighted-bar-dip', name: 'Weighted Bar Dip', category: 'calisthenics', customSets: 3, customReps: '5' },
-      { id: 'ring-row', name: 'Ring Row', category: 'compound', customSets: 2, customReps: '6' },
+      // Strength superset
+      { id: 'weighted-bar-dip', name: 'Weighted Bar Dip', category: 'calisthenics', customSets: 3, customReps: '5', supersetGroup: 'upper-a-ss2' },
+      { id: 'ring-row', name: 'Ring Row', category: 'compound', customSets: 3, customReps: '6', supersetGroup: 'upper-a-ss2' },
       // Hypertrophy
       { id: 'weighted-ring-push-up', name: 'Weighted Ring Push Up', category: 'calisthenics', customSets: 2, customReps: '8' },
       { id: 'trap-bar-farmers-carry', name: 'Trap Bar Farmers Carry', category: 'carry', customSets: 2, customReps: '30s' },
@@ -97,21 +101,21 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
 
   // ============================================================
   // DAY 3: Lower B — Cardio → Plyometrics → Power → Strength → Hypertrophy → Mobility
+  // Supersets: Side Jumps+Box Jump to Depth Jump | Hip Thrust+Bulgarian Split Squat
   // ============================================================
   {
     dayNumber: 3, label: 'Lower B',
     description: 'Cardio → Plyometrics → Power → Strength → Hypertrophy → Mobility',
     type: 'lower', warmUp: WARM_UP,
     exercises: [
-      // Cardio (pre-plyo warmup described in day description; actual cardio is workout-level)
-      // Plyometrics
-      { id: 'side-jumps', name: 'Side Jumps', category: 'plyometric', customSets: 3, customReps: '10' },
-      { id: 'box-jump-to-depth-jump', name: 'Box Jump to Depth Jump', category: 'plyometric', customSets: 3, customReps: '5' },
+      // Plyometrics superset
+      { id: 'side-jumps', name: 'Side Jumps', category: 'plyometric', customSets: 3, customReps: '10', supersetGroup: 'lower-b-ss1' },
+      { id: 'box-jump-to-depth-jump', name: 'Box Jump to Depth Jump', category: 'plyometric', customSets: 3, customReps: '5', supersetGroup: 'lower-b-ss1' },
       // Power
       { id: 'devils-press', name: 'Devils Press', category: 'conditioning', customSets: 3, customReps: '8' },
-      // Strength
-      { id: 'barbell-hip-thrust', name: 'Barbell Hip Thrust', category: 'compound', customSets: 3, customReps: '5' },
-      { id: 'bulgarian-split-squat', name: 'Bulgarian Split Squat', category: 'compound', customSets: 2, customReps: '6' },
+      // Strength superset
+      { id: 'barbell-hip-thrust', name: 'Barbell Hip Thrust', category: 'compound', customSets: 3, customReps: '5', supersetGroup: 'lower-b-ss2' },
+      { id: 'bulgarian-split-squat', name: 'Bulgarian Split Squat', category: 'compound', customSets: 3, customReps: '6', supersetGroup: 'lower-b-ss2' },
       // Hypertrophy
       { id: 'ring-leg-curl', name: 'Ring Leg Curl', category: 'isolation', customSets: 2, customReps: '10' },
     ],
@@ -120,15 +124,16 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
 
   // ============================================================
   // DAY 4: Upper B — Plyometrics → Power → Strength → Hypertrophy → Mobility + Cardio Finisher
+  // Supersets: Kettlebell Swings+Chest Ball Slams
   // ============================================================
   {
     dayNumber: 4, label: 'Upper B',
     description: 'Plyometrics → Power → Strength → Hypertrophy → Mobility + Cardio Finisher',
     type: 'upper', warmUp: WARM_UP,
     exercises: [
-      // Plyometrics
-      { id: 'kettlebell-swing', name: 'Kettlebell Swings', category: 'conditioning', customSets: 3, customReps: '20' },
-      { id: 'chest-ball-slam', name: 'Chest Ball Slams', category: 'plyometric', customSets: 3, customReps: '10' },
+      // Plyometrics superset
+      { id: 'kettlebell-swing', name: 'Kettlebell Swings', category: 'conditioning', customSets: 3, customReps: '20', supersetGroup: 'upper-b-ss1' },
+      { id: 'chest-ball-slam', name: 'Chest Ball Slams', category: 'plyometric', customSets: 3, customReps: '10', supersetGroup: 'upper-b-ss1' },
       // Power
       { id: 'front-lever-hold', name: 'Tuck Front Lever Hold', category: 'calisthenics', customSets: 3, customReps: '15s' },
       // Strength
@@ -142,17 +147,18 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
 
   // ============================================================
   // DAY 5: Full Body — Plyometrics → Power → Strength → Hypertrophy → Cardio → Mobility
+  // Supersets: Broad Jumps+Side to Side Ball Slams
   // ============================================================
   {
     dayNumber: 5, label: 'Full Body',
     description: 'Plyometrics → Power → Strength → Hypertrophy → Cardio → Mobility',
     type: 'full-body', warmUp: WARM_UP,
     exercises: [
-      // Plyometrics
-      { id: 'power-snatch', name: 'Power Snatch', category: 'explosive', customSets: 3, customReps: '5' },
-      { id: 'broad-jumps-b', name: 'Broad Jumps', category: 'plyometric', customSets: 3, customReps: '5' },
-      // Power
-      { id: 'side-to-side-ball-slams', name: 'Side to Side Ball Slams', category: 'conditioning', customSets: 3, customReps: '6' },
+      // Plyometrics superset
+      { id: 'power-snatch', name: 'Power Snatch', category: 'explosive', customSets: 3, customReps: '5', supersetGroup: 'fullbody-ss1' },
+      { id: 'broad-jumps-b', name: 'Broad Jumps', category: 'plyometric', customSets: 3, customReps: '5', supersetGroup: 'fullbody-ss1' },
+      // Power superset
+      { id: 'side-to-side-ball-slams', name: 'Side to Side Ball Slams', category: 'conditioning', customSets: 3, customReps: '6', supersetGroup: 'fullbody-ss2' },
       // Strength
       { id: 'zercher-squat-b', name: 'Zercher Squat', category: 'compound', customSets: 3, customReps: '5' },
       { id: 'low-cable-row', name: 'Low Cable Row', category: 'compound', customSets: 2, customReps: '8' },
