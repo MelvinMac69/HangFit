@@ -155,10 +155,10 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
     type: 'full-body', warmUp: WARM_UP,
     exercises: [
       // Plyometrics superset
-      { id: 'power-snatch', name: 'Power Snatch', category: 'explosive', customSets: 3, customReps: '5', supersetGroup: 'fullbody-ss1' },
       { id: 'broad-jumps-b', name: 'Broad Jumps', category: 'plyometric', customSets: 3, customReps: '5', supersetGroup: 'fullbody-ss1' },
-      // Power superset
-      { id: 'side-to-side-ball-slams', name: 'Side to Side Ball Slams', category: 'conditioning', customSets: 3, customReps: '6', supersetGroup: 'fullbody-ss2' },
+      { id: 'side-to-side-ball-slams', name: 'Side to Side Ball Slams', category: 'conditioning', customSets: 3, customReps: '6', supersetGroup: 'fullbody-ss1' },
+      // Power
+      { id: 'power-snatch', name: 'Power Snatch', category: 'explosive', customSets: 3, customReps: '5' },
       // Strength
       { id: 'zercher-squat-b', name: 'Zercher Squat', category: 'compound', customSets: 3, customReps: '5' },
       { id: 'low-cable-row', name: 'Low Cable Row', category: 'compound', customSets: 2, customReps: '8' },
