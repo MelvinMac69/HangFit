@@ -345,8 +345,8 @@ function HIITTimer({
 
   // Phase transition beeps — fire ONCE when phase changes
   React.useEffect(() => {
-    // Always update ref so we track the last phase we observed (even if audio wasn't ready)
-    if (!audioReady) { prevPhaseRef.current = phase; return }
+    // Only fire beeps when audio is ready; always update ref so we catch up when it becomes ready
+    if (!audioReady) return
     if (prevPhaseRef.current !== phase) {
       if (phase === 'work') workBeep()
       else if (phase === 'rest') restBeep()
@@ -520,7 +520,7 @@ function AMRAPTimer({
 
   // Done beep
   React.useEffect(() => {
-    if (!audioReady) { prevPhaseRef.current = phase; return }
+    if (!audioReady) return
     if (prevPhaseRef.current !== phase && phase === 'done') doneBeep()
     prevPhaseRef.current = phase
   }, [phase, audioReady, doneBeep])
@@ -704,7 +704,7 @@ function EMOMTimer({
 
   // Done beep
   React.useEffect(() => {
-    if (!audioReady) { prevPhaseRef.current = phase; return }
+    if (!audioReady) return
     if (prevPhaseRef.current !== phase && phase === 'done') doneBeep()
     prevPhaseRef.current = phase
   }, [phase, audioReady, doneBeep])
