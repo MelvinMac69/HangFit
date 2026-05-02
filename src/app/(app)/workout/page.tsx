@@ -47,19 +47,32 @@ import {
 function useAudioBeep() {
   const audioCtxRef = React.useRef<globalThis.AudioContext | null>(null)
   const initializedRef = React.useRef(false)
+  const [isReady, setIsReady] = React.useState(false)
 
   const init = React.useCallback(() => {
     if (initializedRef.current) return
     try {
-      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
-      initializedRef.current = true
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+      audioCtxRef.current = new AudioCtx()
+      // iOS Safari: AudioContext starts in 'suspended' state, needs resume() after user gesture
+      if (audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume().then(() => {
+          initializedRef.current = true
+          setIsReady(true)
+        }).catch(() => { initializedRef.current = true; setIsReady(true) })
+      } else {
+        initializedRef.current = true
+        setIsReady(true)
+      }
     } catch (e) {}
   }, [])
 
   const beep = React.useCallback((freq = 880, duration = 0.12, volume = 0.4) => {
     if (!audioCtxRef.current) return
+    const ctx = audioCtxRef.current
+    // iOS Safari: resume if suspended before playing
+    if (ctx.state === 'suspended') { ctx.resume().catch(() => {}) }
     try {
-      const ctx = audioCtxRef.current
       const osc = ctx.createOscillator()
       const gain = ctx.createGain()
       osc.connect(gain); gain.connect(ctx.destination)
@@ -83,7 +96,7 @@ function useAudioBeep() {
     if (val === 1) beep(1000, 0.15, 0.5)
   }, [beep])
 
-  return { init, tick, workBeep, restBeep, doneBeep, countdownBeep }
+  return { init, isReady, beep, tick, workBeep, restBeep, doneBeep, countdownBeep }
 }
 
 // Rest Timer Component
@@ -323,13 +336,12 @@ function HIITTimer({
   const [secondsLeft, setSecondsLeft] = React.useState(workSeconds)
   const [currentRound, setCurrentRound] = React.useState(0)
   const [paused, setPaused] = React.useState(false)
-  const [audioReady, setAudioReady] = React.useState(false)
-  const { init, workBeep, restBeep, doneBeep, countdownBeep } = useAudioBeep()
+  const { init, isReady: audioReady, beep, workBeep, restBeep, doneBeep, countdownBeep } = useAudioBeep()
   const onDoneRef = React.useRef(onDone)
   React.useEffect(() => { onDoneRef.current = onDone }, [onDone])
   const prevSecondsRef = React.useRef(secondsLeft)
 
-  const handleStart = () => { init(); setAudioReady(true); setCountdown(5); setPhase('countdown') }
+  const handleStart = () => { init(); setCountdown(5); setPhase('countdown') }
 
   // Phase transition beeps — fire ONCE when phase changes
   const prevPhaseRef = React.useRef(phase)
@@ -413,6 +425,14 @@ function HIITTimer({
         <button onClick={handleStart} className="w-full py-3 rounded-xl bg-orange-500/30 border border-orange-500/60 text-orange-400 font-bold text-sm hover:bg-orange-500/40 transition-colors flex items-center justify-center gap-2">
           🔊 ⏱ START — HIIT
         </button>
+        <div className="flex gap-2 mt-2">
+          <button
+            onClick={() => { init(); setTimeout(() => { beep(880, 0.15, 0.5); setTimeout(() => beep(440, 0.15, 0.4), 200) }, 50) }}
+            className="flex-1 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-muted-foreground hover:bg-white/10 transition-colors"
+          >
+            🔊 Test Sound
+          </button>
+        </div>
       </div>
     )
   }
@@ -498,13 +518,12 @@ function AMRAPTimer({
   const [totalSecondsLeft, setTotalSecondsLeft] = React.useState(totalMinutes * 60)
   const [roundsCompleted, setRoundsCompleted] = React.useState(0)
   const [paused, setPaused] = React.useState(false)
-  const [audioReady, setAudioReady] = React.useState(false)
-  const { init, doneBeep, countdownBeep } = useAudioBeep()
+  const { init, isReady: audioReady, doneBeep, countdownBeep } = useAudioBeep()
   const onDoneRef = React.useRef(onDone)
   const prevSecondsRef = React.useRef(totalSecondsLeft)
   React.useEffect(() => { onDoneRef.current = onDone }, [onDone])
 
-  const handleStart = () => { init(); setAudioReady(true); setCountdown(5); setPhase('countdown') }
+  const handleStart = () => { init(); setCountdown(5); setPhase('countdown') }
 
   React.useEffect(() => {
     if (!audioReady) return
@@ -635,13 +654,12 @@ function EMOMTimer({
   const [totalSecondsLeft, setTotalSecondsLeft] = React.useState(totalMinutes * 60)
   const [currentRound, setCurrentRound] = React.useState(1)
   const [paused, setPaused] = React.useState(false)
-  const [audioReady, setAudioReady] = React.useState(false)
-  const { init, workBeep, doneBeep, countdownBeep } = useAudioBeep()
+  const { init, isReady: audioReady, workBeep, doneBeep, countdownBeep } = useAudioBeep()
   const onDoneRef = React.useRef(onDone)
   const prevSecondsRef = React.useRef(secondsLeft)
   React.useEffect(() => { onDoneRef.current = onDone }, [onDone])
 
-  const handleStart = () => { init(); setAudioReady(true); setCountdown(5); setPhase('countdown') }
+  const handleStart = () => { init(); setCountdown(5); setPhase('countdown') }
 
   // Minute change beep
   React.useEffect(() => {
@@ -949,11 +967,37 @@ function ExerciseCard({
           {cue && (
             <p className="text-xs text-orange-400 mt-1 leading-snug">{cue}</p>
           )}
-          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-            <span>{completedSets}/{sets.length} sets</span>
-            {totalVolume > 0 && <span>{(totalVolume / 1000).toFixed(1)}k lbs</span>}
-            <span className="text-white/30">Rest 90s</span>
-          </div>
+          {/* Interval/timer block info — shown in collapsed header instead of set metadata */}
+          {isHIIT && hiitConfig && (
+            <div className="flex items-center gap-3 mt-1 text-xs text-orange-400">
+              <span>⏱ HIIT</span>
+              <span>{hiitConfig.rounds} rounds</span>
+              <span>{hiitConfig.workSeconds}s/{hiitConfig.restSeconds}s</span>
+              {hiitConfig.warmupSeconds && <span>+{hiitConfig.warmupSeconds / 60 | 0}min warmup</span>}
+            </div>
+          )}
+          {isEMOM && emomConfig && (
+            <div className="flex items-center gap-3 mt-1 text-xs text-orange-400">
+              <span>⏱ EMOM</span>
+              <span>{emomConfig.totalMinutes} min</span>
+              {emomConfig.minuteLabel && <span className="text-orange-300 truncate max-w-xs">{emomConfig.minuteLabel.split('|')[0].trim()}</span>}
+            </div>
+          )}
+          {isAMRAP && amrapConfig && (
+            <div className="flex items-center gap-3 mt-1 text-xs text-orange-400">
+              <span>⏱ AMRAP</span>
+              <span>{amrapConfig.totalMinutes} min</span>
+              <span>{amrapConfig.circuit.length} exercises</span>
+            </div>
+          )}
+          {/* Standard set metadata — hidden for interval blocks */}
+          {!isHIIT && !isAMRAP && !isEMOM && (
+            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+              <span>{completedSets}/{sets.length} sets</span>
+              {totalVolume > 0 && <span>{(totalVolume / 1000).toFixed(1)}k lbs</span>}
+              <span className="text-white/30">Rest 90s</span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {completedSets === sets.length && sets.length > 0 && (
