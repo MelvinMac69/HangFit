@@ -1,24 +1,63 @@
 import type { WorkoutDay } from '@/types/workout'
 
 // ============================================================
-// HangFit Hybrid Program — Revised 2026-04-26
+// HangFit Hybrid Program — Revised 2026-05-02
 // Eugene Tao Hybrid Style: Plyometrics → Power → Strength → Hypertrophy → Mobility → Cardio
 // ============================================================
 
 // Program version — bump to bust stale localStorage caches
-export const PROGRAM_VERSION = 2
+export const PROGRAM_VERSION = 3
 
-// Shared warm-up (all days)
-const WARM_UP = [
-  { name: 'Jump Rope or March in Place', detail: '2 min' },
+// ────────────────────────────────────────────────────────────
+// WARM-UP TEMPLATES (day-specific)
+// ────────────────────────────────────────────────────────────
+
+const LOWER_A_WARMUP = [
+  { name: 'Easy Cardio', detail: '2–3 min', cue: 'Fan bike, ski erg, jump rope, or march in place' },
   { name: 'Leg Swings (front/back, lateral)', detail: '2×20 each' },
   { name: 'Hip Airplane (single leg)', detail: '2×10 each' },
   { name: 'Deep Squat Hold + Rise', detail: '5×' },
-  { name: 'Band Pull-Aparts', detail: '2×15' },
-  { name: 'Dislocates with PVC/Band', detail: '10' },
+  { name: 'Ankle Rocks / Calf Pumps', detail: '10 each' },
+  { name: 'Walking Lunge Prep (optional)', detail: '1×5 each' },
 ]
 
-// Day 1 mobility
+const UPPER_A_WARMUP = [
+  { name: 'Easy Cardio', detail: '2–3 min', cue: 'Fan bike, ski erg, or march in place' },
+  { name: 'Band Pull-Aparts', detail: '2×15' },
+  { name: 'PVC/Band Dislocates', detail: '10' },
+  { name: 'Wall Slides or Scap Push-Ups', detail: '10' },
+  { name: 'Arm Circles / Shoulder Prep', detail: '10 each direction' },
+  { name: 'Brief Hip Opener (optional)', detail: '30s each side' },
+]
+
+const LOWER_B_WARMUP = [
+  { name: 'Easy Cardio', detail: '3 min warm-up', cue: 'Fan bike or ski erg — easy pace' },
+  { name: 'Sprint Prep / Dynamic Lower-Body', detail: '5 min', cue: 'High knees, butt kicks, leg swings' },
+  { name: 'Deep Squat Hold + Rise', detail: '5×' },
+  { name: 'Ankle Rocks / Calf Pumps', detail: '10 each' },
+]
+
+const UPPER_B_WARMUP = [
+  { name: 'Easy Cardio', detail: '2–3 min', cue: 'Fan bike, ski erg, or march in place' },
+  { name: 'Band Pull-Aparts', detail: '2×15' },
+  { name: 'PVC/Band Dislocates', detail: '10' },
+  { name: 'Scapular Prep', detail: '10' },
+  { name: 'Thoracic Opener', detail: '5 reps each direction' },
+  { name: 'Brief Hip Maintenance (optional)', detail: '30s each side' },
+]
+
+const FULLBODY_WARMUP = [
+  { name: 'Easy Cardio', detail: '2–3 min', cue: 'Fan bike, ski erg, or march in place' },
+  { name: 'Lower-Body Dynamic Prep', detail: '1 drill', cue: 'Leg swings or walking lunges' },
+  { name: 'Upper/Scapular Prep', detail: '1 drill', cue: 'Band pull-aparts or wall slides' },
+  { name: 'Deep Squat Pattern Prep', detail: '5 reps' },
+  { name: 'Shoulder Prep', detail: 'Arm circles or dislocates' },
+]
+
+// ────────────────────────────────────────────────────────────
+// MOBILITY TEMPLATES (day-specific)
+// ────────────────────────────────────────────────────────────
+
 const LOWER_A_MOBILITY = [
   { name: 'Cossack Squat', detail: '10 reps each side' },
   { name: '90/90 Hip Stretch', detail: '30s each side' },
@@ -26,41 +65,46 @@ const LOWER_A_MOBILITY = [
   { name: 'Hip Flexor Lunge Stretch', detail: '60s per side' },
 ]
 
-// Day 2 mobility
 const UPPER_A_MOBILITY = [
   { name: 'Dead Hang', detail: '2×30s' },
-  { name: '90/90 Hip Switch', detail: '2×8 each direction' },
   { name: 'Wall Shoulder Slides', detail: '2×10' },
+  { name: 'Thoracic Extension On Bench', detail: '2×30s' },
 ]
 
-// Day 3 mobility
 const LOWER_B_MOBILITY = [
   { name: 'Kneeling Hip Flexor Stretch', detail: '30s each side' },
   { name: 'Cossack Squats', detail: '2×10 reps each side' },
   { name: 'Reverse Nordic Stretch', detail: '2×30s' },
+  { name: '90/90 Hip Switch (optional)', detail: '5 reps each direction' },
 ]
 
-// Day 4 mobility
 const UPPER_B_MOBILITY = [
   { name: 'Thoracic Extension On Bench', detail: '2×30s' },
   { name: 'Side Plank', detail: '2×30s each side' },
+  { name: 'Dead Hang', detail: '2×30s' },
 ]
 
-// Day 5 mobility
 const FULLBODY_MOBILITY = [
   { name: 'Deep Squat Hold + Rise', detail: '5×' },
-  { name: 'Hip Flexor Stretch', detail: '30s' },
+  { name: 'Hip Flexor Stretch', detail: '30s each side' },
+  { name: 'Thoracic Extension On Bench', detail: '30s' },
 ]
 
+// ────────────────────────────────────────────────────────────
+// PROGRAM DAYS
+// ────────────────────────────────────────────────────────────
+
 export const WORKOUT_PROGRAM: WorkoutDay[] = [
+
   // ============================================================
-  // DAY 1: Lower A — Plyometrics → Power → Strength → Hypertrophy → Mobility
-  // Supersets: Broad Jumps+Box Jumps | Trap Bar Jump Squat+Zercher Squat
+  // DAY 1 — LOWER A
+  // Plyometrics → Power → Strength → Hypertrophy → Mobility
+  // + Optional Light Cooldown Cardio
   // ============================================================
   {
     dayNumber: 1, label: 'Lower A',
     description: 'Plyometrics → Power → Strength → Hypertrophy → Mobility',
-    type: 'lower', warmUp: WARM_UP,
+    type: 'lower', warmUp: LOWER_A_WARMUP,
     exercises: [
       // Plyometrics superset
       { id: 'broad-jumps', name: 'Broad Jumps', category: 'plyometric', customSets: 3, customReps: '5', supersetGroup: 'lower-a-ss1' },
@@ -76,13 +120,13 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
   },
 
   // ============================================================
-  // DAY 2: Upper A — Plyometrics → Power → Strength → Hypertrophy → Mobility
-  // Supersets: Med Ball Slams+Clap Push Up | Weighted Bar Dip+Ring Row
+  // DAY 2 — UPPER A
+  // Plyometrics → Power → Strength → Hypertrophy → Mobility
   // ============================================================
   {
     dayNumber: 2, label: 'Upper A',
     description: 'Plyometrics → Power → Strength → Hypertrophy → Mobility',
-    type: 'upper', warmUp: WARM_UP,
+    type: 'upper', warmUp: UPPER_A_WARMUP,
     exercises: [
       // Plyometrics superset
       { id: 'medicine-ball-slams', name: 'Medicine Ball Slams', category: 'plyometric', customSets: 3, customReps: '8', supersetGroup: 'upper-a-ss1' },
@@ -94,23 +138,37 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
       { id: 'ring-row', name: 'Ring Row', category: 'compound', customSets: 3, customReps: '6', supersetGroup: 'upper-a-ss2' },
       // Hypertrophy
       { id: 'weighted-ring-push-up', name: 'Weighted Ring Push Up', category: 'calisthenics', customSets: 2, customReps: '8' },
-      { id: 'trap-bar-farmers-carry', name: 'Trap Bar Farmers Carry', category: 'carry', customSets: 2, customReps: '30s' },
+      { id: 'trap-bar-farmers-carry', name: 'Trap Bar Farmers Carry', category: 'carry', customSets: 2, customReps: '30s', isTimeBased: true },
     ],
     mobilityBlock: UPPER_A_MOBILITY
   },
 
   // ============================================================
-  // DAY 3: Lower B — Cardio → Plyometrics → Power → Strength → Hypertrophy → Mobility
-  // Supersets: Side Jumps+Box Jump to Depth Jump | Hip Thrust+Bulgarian Split Squat
+  // DAY 3 — LOWER B (HIIT Day)
+  // Cardio Warmup/HIIT Sprints → Plyometrics → Power → Strength → Hypertrophy → Mobility
   // ============================================================
   {
     dayNumber: 3, label: 'Lower B',
-    description: 'Cardio → Plyometrics → Power → Strength → Hypertrophy → Mobility',
-    type: 'lower', warmUp: WARM_UP,
+    description: 'HIIT Sprints → Plyometrics → Power → Strength → Hypertrophy → Mobility',
+    type: 'lower', warmUp: LOWER_B_WARMUP,
     exercises: [
+      // HIIT Sprint Block — visible at the top of the workout
+      {
+        id: 'hiit-sprints',
+        name: 'HIIT Sprints',
+        category: 'conditioning',
+        isHIIT: true,
+        hiitConfig: {
+          warmupSeconds: 180,   // 3 min easy warmup
+          rounds: 6,
+          workSeconds: 15,     // 15s sprint
+          restSeconds: 45,      // 45s rest/easy
+          label: '6×15s sprint / 45s rest'
+        }
+      },
       // Plyometrics superset
-      { id: 'side-jumps', name: 'Side Jumps', category: 'plyometric', customSets: 3, customReps: '10', supersetGroup: 'lower-b-ss1' },
-      { id: 'box-jump-to-depth-jump', name: 'Box Jump to Depth Jump', category: 'plyometric', customSets: 3, customReps: '5', supersetGroup: 'lower-b-ss1' },
+      { id: 'side-jumps', name: 'Side Jumps', category: 'plyometric', customSets: 2, customReps: '8', supersetGroup: 'lower-b-ss1' },
+      { id: 'box-jump-stick', name: 'Box Jump (Stick Landing)', category: 'plyometric', customSets: 2, customReps: '3', supersetGroup: 'lower-b-ss1' },
       // Power
       { id: 'devils-press', name: 'Devils Press', category: 'conditioning', customSets: 3, customReps: '8' },
       // Strength superset
@@ -123,36 +181,56 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
   },
 
   // ============================================================
-  // DAY 4: Upper B — Plyometrics → Power → Strength → Hypertrophy → Mobility + Cardio Finisher
-  // Supersets: Kettlebell Swings+Chest Ball Slams
+  // DAY 4 — UPPER B
+  // Plyometrics → Power → Strength → Hypertrophy → EMOM Finisher → Mobility
   // ============================================================
   {
     dayNumber: 4, label: 'Upper B',
-    description: 'Plyometrics → Power → Strength → Hypertrophy → Mobility + Cardio Finisher',
-    type: 'upper', warmUp: WARM_UP,
+    description: 'Plyometrics → Power → Strength → Hypertrophy → EMOM Finisher → Mobility',
+    type: 'upper', warmUp: UPPER_B_WARMUP,
     exercises: [
       // Plyometrics superset
       { id: 'kettlebell-swing', name: 'Kettlebell Swings', category: 'conditioning', customSets: 3, customReps: '20', supersetGroup: 'upper-b-ss1' },
       { id: 'chest-ball-slam', name: 'Chest Ball Slams', category: 'plyometric', customSets: 3, customReps: '10', supersetGroup: 'upper-b-ss1' },
       // Power
-      { id: 'front-lever-hold', name: 'Tuck Front Lever Hold', category: 'calisthenics', customSets: 3, customReps: '15s' },
+      {
+        id: 'front-lever-hold',
+        name: 'Tuck Front Lever Hold',
+        category: 'calisthenics',
+        customSets: 3,
+        customReps: '15s',
+        isTimeBased: true,
+        duration: 15,
+        cue: 'Max intent — rest 90s between holds'
+      },
       // Strength
       { id: 'weighted-pull-up', name: 'Weighted Pull Up', category: 'calisthenics', customSets: 3, customReps: '5' },
       { id: 'cable-chest-fly', name: 'Cable Chest Flys', category: 'compound', customSets: 3, customReps: '8' },
       // Hypertrophy
       { id: 'cable-y-raise', name: 'Cable Y-Raise', category: 'isolation', customSets: 2, customReps: '10' },
+      // EMOM Conditioning Finisher
+      {
+        id: 'emom-kb-bike',
+        name: 'EMOM Conditioning Finisher',
+        category: 'conditioning',
+        isEMOM: true,
+        emomConfig: {
+          totalMinutes: 10,
+          minuteLabel: 'Min 1: 15–20 KB Swings | Min 2: Fan Bike / Ski Erg hard'
+        }
+      },
     ],
     mobilityBlock: UPPER_B_MOBILITY
   },
 
   // ============================================================
-  // DAY 5: Full Body — Plyometrics → Power → Strength → Hypertrophy → Cardio → Mobility
-  // Supersets: Broad Jumps+Side to Side Ball Slams
+  // DAY 5 — FULL BODY
+  // Plyometrics → Power → Strength → Hypertrophy → AMRAP Circuit → Mobility
   // ============================================================
   {
     dayNumber: 5, label: 'Full Body',
-    description: 'Plyometrics → Power → Strength → Hypertrophy → Cardio → Mobility',
-    type: 'full-body', warmUp: WARM_UP,
+    description: 'Plyometrics → Power → Strength → Hypertrophy → AMRAP Circuit → Mobility',
+    type: 'full-body', warmUp: FULLBODY_WARMUP,
     exercises: [
       // Plyometrics superset
       { id: 'broad-jumps-b', name: 'Broad Jumps', category: 'plyometric', customSets: 3, customReps: '5', supersetGroup: 'fullbody-ss1' },
@@ -164,11 +242,52 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
       { id: 'low-cable-row', name: 'Low Cable Row', category: 'compound', customSets: 2, customReps: '8' },
       // Hypertrophy
       { id: 'goblet-rdl', name: 'Goblet RDL', category: 'compound', customSets: 2, customReps: '10' },
-      // Cardio
-      { id: 'burpee-to-pull-up', name: 'Burpee to Pull Up', category: 'conditioning', customSets: 3, customReps: '8' },
-      { id: 'suitcase-carry', name: 'Suitcase Carry', category: 'carry', customSets: 3, customReps: '30s each side' },
+      // AMRAP Conditioning Circuit
+      {
+        id: 'amrap-circuit',
+        name: 'Full-Body Conditioning Circuit',
+        category: 'conditioning',
+        isAMRAP: true,
+        amrapConfig: {
+          totalMinutes: 12,
+          circuit: [
+            { name: 'Burpee to Pull Up', reps: 6 },
+            { name: 'Suitcase Carry', reps: '20m each side' },
+            { name: 'Kettlebell Swings', reps: 15 },
+            { name: 'Ski Erg / Fan Bike', reps: '150m' },
+          ]
+        }
+      },
     ],
     mobilityBlock: FULLBODY_MOBILITY
+  },
+
+  // ============================================================
+  // OFF DAY — Zone 2 Cardio
+  // ============================================================
+  {
+    dayNumber: 6, label: 'Off Day',
+    description: 'Zone 2 Cardio — 20 to 40 min',
+    type: 'rest',
+    warmUp: [],
+    isOffDay: true,
+    exercises: [
+      {
+        id: 'zone2-cardio',
+        name: 'Zone 2 Cardio',
+        category: 'conditioning',
+        customSets: 1,
+        customReps: '20–40 min',
+        isTimeBased: true,
+        duration: 2400, // placeholder; user sets actual duration
+        cue: 'RPE 5–6 · Fan Bike or Ski Erg · Steady pace'
+      },
+    ],
+    mobilityBlock: [
+      { name: 'Deep Squat Hold + Rise', detail: '5×' },
+      { name: 'Hip Flexor Stretch', detail: '30s each side' },
+      { name: 'Lat Hang', detail: '30s' },
+    ]
   },
 ]
 

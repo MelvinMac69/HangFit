@@ -255,13 +255,316 @@ function WorkTimer({
 }
 
 // ============================================================
-// EMOM TIMER — circular SVG progress + round counter for KB Swings
+// HIIT INTERVAL TIMER — sprint / rest intervals
 // ============================================================
-function EMOMTimer({
+function HIITTimer({
+  warmupSeconds,
+  rounds,
+  workSeconds,
+  restSeconds,
+  label,
+  onDone,
+}: {
+  warmupSeconds?: number
+  rounds: number
+  workSeconds: number
+  restSeconds: number
+  label?: string
+  onDone: () => void
+}) {
+  type Phase = 'idle' | 'countdown' | 'warmup' | 'work' | 'rest' | 'done'
+  const [phase, setPhase] = React.useState<Phase>('idle')
+  const [countdown, setCountdown] = React.useState(5)
+  const [secondsLeft, setSecondsLeft] = React.useState(workSeconds)
+  const [currentRound, setCurrentRound] = React.useState(0)
+  const onDoneRef = React.useRef(onDone)
+  React.useEffect(() => { onDoneRef.current = onDone }, [onDone])
+
+  // Phase auto-transition logic
+  React.useEffect(() => {
+    if (phase === 'countdown') {
+      if (countdown <= 0) {
+        // Start warmup or first work interval
+        setSecondsLeft(warmupSeconds ?? 0)
+        setCurrentRound(0)
+        setPhase(warmupSeconds ? 'warmup' : 'work')
+        return
+      }
+      const id = setTimeout(() => setCountdown(c => c - 1), 1000)
+      return () => clearTimeout(id)
+    }
+
+    if (phase === 'warmup' || phase === 'work' || phase === 'rest') {
+      if (secondsLeft <= 1) {
+        if (phase === 'warmup') {
+          // Transition to first work interval
+          setSecondsLeft(workSeconds)
+          setCurrentRound(1)
+          setPhase('work')
+        } else if (phase === 'work') {
+          if (currentRound >= rounds) {
+            // All rounds complete
+            setPhase('done')
+            onDoneRef.current()
+          } else {
+            // Transition to rest
+            setSecondsLeft(restSeconds)
+            setPhase('rest')
+          }
+        } else if (phase === 'rest') {
+          // Transition to next work interval
+          setSecondsLeft(workSeconds)
+          setCurrentRound(r => r + 1)
+          setPhase('work')
+        }
+        return
+      }
+      const id = setTimeout(() => setSecondsLeft(s => s - 1), 1000)
+      return () => clearTimeout(id)
+    }
+  }, [phase, countdown, secondsLeft, rounds, workSeconds, restSeconds, warmupSeconds])
+
+  const isWork = phase === 'work'
+  const isRest = phase === 'rest'
+  const isWarmup = phase === 'warmup'
+  const totalInterval = isWork ? workSeconds : restSeconds
+  const progress = totalInterval > 0 ? ((totalInterval - secondsLeft) / totalInterval) * 100 : 0
+
+  const phaseColor = isWork ? 'text-red-400' : isRest ? 'text-emerald-400' : isWarmup ? 'text-yellow-400' : 'text-orange-400'
+  const bgColor = isWork ? 'bg-red-500/20 border-red-500/50' : isRest ? 'bg-emerald-500/20 border-emerald-500/50' : isWarmup ? 'bg-yellow-500/20 border-yellow-500/50' : 'bg-orange-500/20 border-orange-500/50'
+
+  if (phase === 'countdown') {
+    return (
+      <div className={`flex flex-col items-center justify-center p-6 rounded-xl border-2 ${bgColor}`}>
+        <span className="text-7xl font-bold text-orange-400 font-mono leading-none">{countdown}</span>
+        <span className="text-sm text-orange-300 mt-2">Get ready — HIIT Sprint Block</span>
+      </div>
+    )
+  }
+
+  if (phase === 'idle') {
+    return (
+      <div className={`rounded-xl border-2 ${bgColor} p-4`}>
+        <div className="text-center mb-3">
+          <p className="text-orange-400 font-bold text-sm uppercase tracking-wide">{label || 'HIIT Sprints'}</p>
+          <p className="text-xs text-orange-300 mt-1">{rounds} rounds × {workSeconds}s work / {restSeconds}s rest{warmupSeconds ? ` · ${warmupSeconds / 60} min warm-up` : ''}</p>
+        </div>
+        <button
+          onClick={() => { setCountdown(5); setPhase('countdown') }}
+          className="w-full py-3 rounded-xl bg-orange-500/30 border border-orange-500/60 text-orange-400 font-bold text-sm hover:bg-orange-500/40 transition-colors"
+        >
+          ⏱ START — HIIT
+        </button>
+      </div>
+    )
+  }
+
+  if (phase === 'done') {
+    return (
+      <div className="flex flex-col items-center justify-center p-6 rounded-xl bg-emerald-500/20 border-2 border-emerald-500/50">
+        <span className="text-4xl mb-2">✅</span>
+        <span className="text-emerald-400 font-bold">Block Complete!</span>
+        <span className="text-xs text-emerald-300 mt-1">{rounds} rounds done</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className={`rounded-xl border-2 ${bgColor} p-4`}>
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className={`text-xs font-bold uppercase tracking-wide ${phaseColor}`}>
+            {isWarmup ? '⏱ Warm-up' : isWork ? '🔥 Sprint' : '😮‍💨 Rest'}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {isWarmup ? `${warmupSeconds}s easy` : `Round ${currentRound} / ${rounds}`}
+          </p>
+        </div>
+        <div className="text-right">
+          <span className={`text-3xl font-bold font-mono ${phaseColor}`}>
+            {secondsLeft}s
+          </span>
+        </div>
+      </div>
+      {/* Progress bar */}
+      <div className="h-3 bg-white/10 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-1000 ${isWork ? 'bg-red-500' : isRest ? 'bg-emerald-500' : 'bg-yellow-500'}`}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      {/* Controls */}
+      <div className="flex gap-2 mt-3">
+        <button
+          onClick={() => { setPhase('done'); onDoneRef.current() }}
+          className="flex-1 py-2 rounded-lg bg-white/10 text-xs font-semibold hover:bg-white/20 transition-colors"
+        >
+          Skip Block
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
+// AMRAP TIMER — rounds-based circuit timer
+// ============================================================
+function AMRAPTimer({
   totalMinutes,
+  circuit,
   onDone,
 }: {
   totalMinutes: number
+  circuit: { name: string; reps?: number | string; distance?: string; calories?: string }[]
+  onDone: () => void
+}) {
+  const [phase, setPhase] = React.useState<'idle' | 'countdown' | 'running' | 'done'>('idle')
+  const [countdown, setCountdown] = React.useState(5)
+  const [totalSecondsLeft, setTotalSecondsLeft] = React.useState(totalMinutes * 60)
+  const [roundsCompleted, setRoundsCompleted] = React.useState(0)
+  const onDoneRef = React.useRef(onDone)
+  React.useEffect(() => { onDoneRef.current = onDone }, [onDone])
+
+  React.useEffect(() => {
+    if (phase === 'countdown') {
+      if (countdown <= 0) {
+        setPhase('running')
+        setTotalSecondsLeft(totalMinutes * 60)
+        return
+      }
+      const id = setTimeout(() => setCountdown(c => c - 1), 1000)
+      return () => clearTimeout(id)
+    }
+
+    if (phase !== 'running') return
+    const endTime = Date.now() + totalSecondsLeft * 1000
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((endTime - Date.now()) / 1000))
+      setTotalSecondsLeft(left)
+      if (left <= 0) {
+        setPhase('done')
+        onDoneRef.current()
+      }
+    }
+    tick()
+    const id = setInterval(tick, 100)
+    return () => clearInterval(id)
+  }, [phase, countdown, totalSecondsLeft, totalMinutes])
+
+  if (phase === 'countdown') {
+    return (
+      <div className="flex flex-col items-center justify-center p-6 rounded-xl bg-orange-500/20 border-2 border-orange-500/50">
+        <span className="text-7xl font-bold text-orange-400 font-mono leading-none">{countdown}</span>
+        <span className="text-sm text-orange-300 mt-2">Get ready — {totalMinutes} min AMRAP</span>
+      </div>
+    )
+  }
+
+  if (phase === 'idle') {
+    return (
+      <div className="space-y-3">
+        <div className="rounded-xl bg-orange-500/10 border-2 border-orange-500/40 p-4">
+          <p className="text-sm text-orange-300 font-semibold mb-2 text-center">{totalMinutes}-min AMRAP Circuit</p>
+          <div className="space-y-1">
+            {circuit.map((item, i) => (
+              <p key={i} className="text-xs text-orange-200 text-center">
+                {item.reps && `${item.reps} `}{item.name}
+                {item.distance && ` · ${item.distance}`}
+                {item.calories && ` · ${item.calories}`}
+              </p>
+            ))}
+          </div>
+        </div>
+        <button
+          onClick={() => { setCountdown(5); setPhase('countdown') }}
+          className="w-full py-3 rounded-xl bg-orange-500/20 border-2 border-orange-500/40 text-orange-400 font-bold text-sm hover:bg-orange-500/30 transition-colors"
+        >
+          ⏱ START — {totalMinutes} min AMRAP
+        </button>
+      </div>
+    )
+  }
+
+  if (phase === 'done') {
+    return (
+      <div className="flex flex-col items-center justify-center p-6 rounded-xl bg-emerald-500/20 border-2 border-emerald-500/50">
+        <span className="text-4xl mb-2">✅</span>
+        <span className="text-emerald-400 font-bold">Time!</span>
+        <span className="text-emerald-300 text-sm mt-1">{roundsCompleted} rounds completed</span>
+        <button
+          onClick={() => { setPhase('done'); onDoneRef.current() }}
+          className="mt-3 px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-semibold"
+        >
+          Mark Done
+        </button>
+      </div>
+    )
+  }
+
+  const mins = Math.floor(totalSecondsLeft / 60)
+  const secs = totalSecondsLeft % 60
+
+  return (
+    <div className="rounded-xl bg-orange-500/10 border-2 border-orange-500/40 p-4 space-y-3">
+      {/* Timer display */}
+      <div className="text-center">
+        <span className="text-5xl font-bold text-orange-400 font-mono">
+          {mins}:{secs.toString().padStart(2, '0')}
+        </span>
+        <p className="text-xs text-orange-300 mt-1">{totalMinutes} min AMRAP — tap rounds when complete</p>
+      </div>
+
+      {/* Round counter */}
+      <div className="flex items-center justify-center gap-3">
+        <button
+          onClick={() => setRoundsCompleted(r => Math.max(0, r - 1))}
+          className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-lg font-bold"
+        >
+          −
+        </button>
+        <div className="text-center">
+          <span className="text-3xl font-bold text-white">{roundsCompleted}</span>
+          <p className="text-xs text-muted-foreground">rounds</p>
+        </div>
+        <button
+          onClick={() => setRoundsCompleted(r => r + 1)}
+          className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-lg font-bold"
+        >
+          +
+        </button>
+      </div>
+
+      {/* Circuit movements */}
+      <div className="space-y-1">
+        {circuit.map((item, i) => (
+          <p key={i} className="text-xs text-orange-200 text-center">
+            {item.reps && `${item.reps} `}{item.name}
+            {item.distance && ` · ${item.distance}`}
+          </p>
+        ))}
+      </div>
+
+      {/* Done button */}
+      <button
+        onClick={() => { setPhase('done'); onDoneRef.current() }}
+        className="w-full py-2 rounded-lg bg-emerald-500/20 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/30 transition-colors"
+      >
+        Finish Early
+      </button>
+    </div>
+  )
+}
+
+// ============================================================
+// EMOM TIMER — circular SVG progress + round counter
+// ============================================================
+function EMOMTimer({
+  totalMinutes,
+  minuteLabel,
+  onDone,
+}: {
+  totalMinutes: number
+  minuteLabel?: string
   onDone: () => void
 }) {
   const [phase, setPhase] = React.useState<'idle' | 'countdown' | 'running' | 'done'>('idle')
@@ -272,7 +575,6 @@ function EMOMTimer({
   const onDoneRef = React.useRef(onDone)
   React.useEffect(() => { onDoneRef.current = onDone }, [onDone])
 
-  // Countdown phase: tick down every second
   React.useEffect(() => {
     if (phase !== 'countdown') return
     if (countdown <= 0) {
@@ -286,7 +588,6 @@ function EMOMTimer({
     return () => clearTimeout(id)
   }, [phase, countdown, totalMinutes])
 
-  // Running phase: tick every 100ms
   React.useEffect(() => {
     if (phase !== 'running') return
     const endTime = Date.now() + totalSecondsLeft * 1000
@@ -310,7 +611,6 @@ function EMOMTimer({
 
   const R = 52
   const circ = 2 * Math.PI * R
-  // progressInMinute: 0→full when timer just started, 1→0 when about to reset
   const progressInMinute = secondsLeft === 60 ? 0 : (60 - secondsLeft) / 60
   const dashOffset = circ * progressInMinute
 
@@ -325,18 +625,24 @@ function EMOMTimer({
 
   if (phase === 'idle') {
     return (
-      <button
-        onClick={() => { setCountdown(5); setPhase('countdown') }}
-        className="w-full py-4 rounded-xl bg-orange-500/20 border-2 border-orange-500/40 text-orange-400 text-center text-base font-bold hover:bg-orange-500/30 transition-colors"
-      >
-        ⏱ START — {totalMinutes}-min EMOM (10 rounds × 60s)
-      </button>
+      <div className="space-y-2">
+        {minuteLabel && (
+          <div className="rounded-lg bg-orange-500/10 p-2">
+            <p className="text-xs text-orange-300 text-center whitespace-pre-line">{minuteLabel}</p>
+          </div>
+        )}
+        <button
+          onClick={() => { setCountdown(5); setPhase('countdown') }}
+          className="w-full py-3 rounded-xl bg-orange-500/20 border-2 border-orange-500/40 text-orange-400 text-center text-sm font-bold hover:bg-orange-500/30 transition-colors"
+        >
+          ⏱ START — {totalMinutes}-min EMOM
+        </button>
+      </div>
     )
   }
 
   return (
     <div className="flex flex-col items-center gap-2">
-      {/* SVG circular timer */}
       <div className="relative w-32 h-32">
         <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
           <circle cx="60" cy="60" r={R} fill="none" stroke="rgba(249,115,22,0.15)" strokeWidth="10" />
@@ -352,11 +658,10 @@ function EMOMTimer({
           <span className="text-xs text-orange-400">/ {totalMinutes}</span>
         </div>
       </div>
-      {/* MM:SS clock */}
       <span className="text-3xl font-bold text-orange-400 font-mono">
         {Math.floor(totalSecondsLeft / 60)}:{(totalSecondsLeft % 60).toString().padStart(2, '0')}
       </span>
-      <div className="text-xs text-muted-foreground">
+      <div className="text-xs text-muted-foreground text-center">
         {totalSecondsLeft > 60 ? `${Math.ceil(totalSecondsLeft / 60) - 1} min remaining` : 'Final minute!'}
       </div>
     </div>
@@ -469,6 +774,11 @@ function ExerciseCard({
   onSwitchExercise,
   isTimeBased,
   isEMOM,
+  isHIIT,
+  isAMRAP,
+  hiitConfig,
+  amrapConfig,
+  emomConfig,
 }: {
   exercise: LocalExercise
   sets: LocalSet[]
@@ -484,6 +794,23 @@ function ExerciseCard({
   onSwitchExercise?: (exerciseIndex: number, newName: string) => void
   isTimeBased?: boolean
   isEMOM?: boolean
+  isHIIT?: boolean
+  isAMRAP?: boolean
+  hiitConfig?: {
+    warmupSeconds?: number
+    rounds: number
+    workSeconds: number
+    restSeconds: number
+    label?: string
+  }
+  amrapConfig?: {
+    totalMinutes: number
+    circuit: { name: string; reps?: number | string; distance?: string; calories?: string }[]
+  }
+  emomConfig?: {
+    totalMinutes: number
+    minuteLabel?: string
+  }
 }) {
   const [expanded, setExpanded] = useState(true)
   const [showSubs, setShowSubs] = useState(false)
@@ -588,12 +915,51 @@ function ExerciseCard({
 
       {expanded && (
         <div className="px-4 pb-4 space-y-2">
-          {/* EMOM Timer for interval-based exercises (e.g. KB swings) */}
+          {/* HIIT Sprint Block */}
+          {isHIIT && hiitConfig && (
+            <div className="mb-3">
+              <HIITTimer
+                warmupSeconds={hiitConfig.warmupSeconds}
+                rounds={hiitConfig.rounds}
+                workSeconds={hiitConfig.workSeconds}
+                restSeconds={hiitConfig.restSeconds}
+                label={hiitConfig.label}
+                onDone={() => {
+                  sets.forEach((_, i) => {
+                    if (!sets[i].completed) {
+                      setLocalCompleted(prev => ({ ...prev, [i]: true }))
+                      handleToggle(i)
+                    }
+                  })
+                }}
+              />
+            </div>
+          )}
+
+          {/* EMOM Timer */}
           {isEMOM && (
-            <div className="mb-3 rounded-xl bg-orange-500/10 border-2 border-orange-500/40 p-4">
-              <p className="text-sm text-orange-300 font-semibold mb-3 text-center">10-min EMOM — 20 swings/min</p>
+            <div className="mb-3">
               <EMOMTimer
-                totalMinutes={10}
+                totalMinutes={emomConfig?.totalMinutes ?? 10}
+                minuteLabel={emomConfig?.minuteLabel}
+                onDone={() => {
+                  sets.forEach((_, i) => {
+                    if (!sets[i].completed) {
+                      setLocalCompleted(prev => ({ ...prev, [i]: true }))
+                      handleToggle(i)
+                    }
+                  })
+                }}
+              />
+            </div>
+          )}
+
+          {/* AMRAP Circuit Block */}
+          {isAMRAP && amrapConfig && (
+            <div className="mb-3">
+              <AMRAPTimer
+                totalMinutes={amrapConfig.totalMinutes}
+                circuit={amrapConfig.circuit}
                 onDone={() => {
                   sets.forEach((_, i) => {
                     if (!sets[i].completed) {
@@ -607,7 +973,7 @@ function ExerciseCard({
           )}
 
           {/* Time-based exercises: show WorkTimer instead of weight/rep inputs */}
-          {isTimeBased && !isEMOM && (
+          {isTimeBased && !isEMOM && !isHIIT && !isAMRAP && (
             <div className="mb-3 rounded-xl bg-orange-500/10 border-2 border-orange-500/40 p-4">
               <WorkTimer
                 duration={typeof sets[0]?.reps === 'number' ? sets[0].reps : parseInt(sets[0]?.reps as string) || 30}
@@ -1725,6 +2091,11 @@ export default function WorkoutPage() {
                     onSwitchExercise={(_exIdx: number, newName: string) => handleSwitchExercise(thisIdx, newName)}
                     isTimeBased={exData?.isTimeBased}
                     isEMOM={exData?.isEMOM}
+                    isHIIT={progExercise?.isHIIT}
+                    isAMRAP={progExercise?.isAMRAP}
+                    hiitConfig={progExercise?.hiitConfig}
+                    amrapConfig={progExercise?.amrapConfig}
+                    emomConfig={progExercise?.emomConfig}
                   />
                 )
                 exerciseIdx++

@@ -11,6 +11,29 @@ export type ExerciseCategory =
 export type PhaseKey = 0 | 1 | 2 | 3
 // 0 = Deload, 1 = Volume/Accumulation, 2 = Strength, 3 = Peak
 
+export interface HIITConfig {
+  warmupSeconds?: number      // e.g. 180 for 3-min warmup
+  rounds: number             // number of sprint rounds
+  workSeconds: number        // sprint duration e.g. 15
+  restSeconds: number         // rest duration e.g. 45
+  label?: string             // optional label override
+}
+
+export interface EMOMConfig {
+  totalMinutes: number
+  minuteLabel?: string       // e.g. "15-20 KB Swings" or "Fan Bike hard"
+}
+
+export interface AMRAPConfig {
+  totalMinutes: number
+  circuit: {
+    name: string
+    reps?: number | string
+    distance?: string
+    calories?: string
+  }[]
+}
+
 export interface Exercise {
   id: string
   name: string
@@ -23,10 +46,20 @@ export interface Exercise {
   substitutions?: { name: string; why: string }[]
   /** Time-based hold exercise — show a tap-to-start timer instead of rep count */
   isTimeBased?: boolean
-  /** EMOM-style interval timer — e.g. 10min KB swings */
+  /** EMOM-style interval timer — e.g. 10min alternating intervals */
   isEMOM?: boolean
+  /** HIIT / sprint intervals block */
+  isHIIT?: boolean
+  /** AMRAP circuit block */
+  isAMRAP?: boolean
   /** Default duration in seconds for time-based exercises */
   duration?: number
+  /** HIIT configuration (rounds, work/rest seconds) */
+  hiitConfig?: HIITConfig
+  /** EMOM configuration */
+  emomConfig?: EMOMConfig
+  /** AMRAP configuration */
+  amrapConfig?: AMRAPConfig
 }
 
 export interface WorkoutSet {
@@ -69,6 +102,8 @@ export interface WorkoutDay {
   warmUp: { name: string; detail: string; cue?: string }[]
   exercises: Exercise[]
   mobilityBlock?: { name: string; detail: string; cue?: string }[]
+  /** Optional off-day cardio template */
+  isOffDay?: boolean
 }
 
 export interface WorkoutLog {
