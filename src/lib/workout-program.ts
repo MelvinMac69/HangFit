@@ -216,7 +216,7 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
         isEMOM: true,
         emomConfig: {
           totalMinutes: 10,
-          minuteLabel: 'Every minute: 20 KB Swings OR 14 Ball Slams'
+          minuteLabel: 'Minute 1: 14 Ball Slams · Minute 2: 12-15 Push-Ups'
         }
       },
     ],

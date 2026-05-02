@@ -345,19 +345,20 @@ function HIITTimer({
 
   // Phase transition beeps — fire ONCE when phase changes
   React.useEffect(() => {
-    if (!audioReady) return
+    // Always update ref so we track the last phase we observed (even if audio wasn't ready)
+    if (!audioReady) { prevPhaseRef.current = phase; return }
     if (prevPhaseRef.current !== phase) {
       if (phase === 'work') workBeep()
       else if (phase === 'rest') restBeep()
       else if (phase === 'done') doneBeep()
-      prevPhaseRef.current = phase
     }
+    prevPhaseRef.current = phase
   }, [phase, audioReady, workBeep, restBeep, doneBeep])
 
   // Countdown beeps in final 3 seconds of each interval
   React.useEffect(() => {
     if (!audioReady) return
-    if ((phase === 'work' || phase === 'rest' || phase === 'countdown') && secondsLeft <= 3 && secondsLeft > 0) {
+    if ((phase === 'work' || phase === 'rest' || phase === 'countdown' || phase === 'warmup') && secondsLeft <= 3 && secondsLeft > 0) {
       if (prevSecondsRef.current !== secondsLeft) countdownBeep(secondsLeft)
     }
     prevSecondsRef.current = secondsLeft
@@ -512,17 +513,19 @@ function AMRAPTimer({
   const [totalSecondsLeft, setTotalSecondsLeft] = React.useState(totalMinutes * 60)
   const [roundsCompleted, setRoundsCompleted] = React.useState(0)
   const { init, isReady: audioReady, doneBeep, countdownBeep } = useAudioBeep()
-  const prevCountdownRef = React.useRef(countdown)
+  const prevCountdownRef = React.useRef<number | undefined>(undefined)
+  const prevPhaseRef = React.useRef(phase)
   const onDoneRef = React.useRef(onDone)
   React.useEffect(() => { onDoneRef.current = onDone }, [onDone])
 
   // Done beep
   React.useEffect(() => {
-    if (!audioReady) return
-    if (phase === 'done') doneBeep()
+    if (!audioReady) { prevPhaseRef.current = phase; return }
+    if (prevPhaseRef.current !== phase && phase === 'done') doneBeep()
+    prevPhaseRef.current = phase
   }, [phase, audioReady, doneBeep])
 
-  // Countdown beeps
+  // Countdown beeps (5-4-3-2-1 before timer starts)
   React.useEffect(() => {
     if (!audioReady) return
     if (phase === 'countdown' && countdown <= 3 && countdown > 0) {
@@ -530,6 +533,15 @@ function AMRAPTimer({
     }
     prevCountdownRef.current = countdown
   }, [countdown, phase, audioReady, countdownBeep])
+
+  // Running phase beeps — use totalSecondsLeft for 3-2-1 within the main timer
+  React.useEffect(() => {
+    if (!audioReady) return
+    if (phase === 'running' && totalSecondsLeft <= 3 && totalSecondsLeft > 0) {
+      if (prevCountdownRef.current !== totalSecondsLeft) countdownBeep(totalSecondsLeft)
+    }
+    prevCountdownRef.current = totalSecondsLeft
+  }, [totalSecondsLeft, phase, audioReady, countdownBeep])
 
   React.useEffect(() => {
     if (phase === 'countdown') {
@@ -685,17 +697,19 @@ function EMOMTimer({
   const [totalSecondsLeft, setTotalSecondsLeft] = React.useState(totalMinutes * 60)
   const [currentRound, setCurrentRound] = React.useState(1)
   const { init, isReady: audioReady, doneBeep, countdownBeep } = useAudioBeep()
-  const prevCountdownRef = React.useRef(countdown)
+  const prevCountdownRef = React.useRef<number | undefined>(undefined)
+  const prevPhaseRef = React.useRef(phase)
   const onDoneRef = React.useRef(onDone)
   React.useEffect(() => { onDoneRef.current = onDone }, [onDone])
 
   // Done beep
   React.useEffect(() => {
-    if (!audioReady) return
-    if (phase === 'done') doneBeep()
+    if (!audioReady) { prevPhaseRef.current = phase; return }
+    if (prevPhaseRef.current !== phase && phase === 'done') doneBeep()
+    prevPhaseRef.current = phase
   }, [phase, audioReady, doneBeep])
 
-  // Countdown beeps
+  // Countdown beeps (5-4-3-2-1 before timer starts)
   React.useEffect(() => {
     if (!audioReady) return
     if (phase === 'countdown' && countdown <= 3 && countdown > 0) {
@@ -703,6 +717,15 @@ function EMOMTimer({
     }
     prevCountdownRef.current = countdown
   }, [countdown, phase, audioReady, countdownBeep])
+
+  // Running phase beeps — use totalSecondsLeft for 3-2-1 within the main timer
+  React.useEffect(() => {
+    if (!audioReady) return
+    if (phase === 'running' && totalSecondsLeft <= 3 && totalSecondsLeft > 0) {
+      if (prevCountdownRef.current !== totalSecondsLeft) countdownBeep(totalSecondsLeft)
+    }
+    prevCountdownRef.current = totalSecondsLeft
+  }, [totalSecondsLeft, phase, audioReady, countdownBeep])
 
   React.useEffect(() => {
     if (phase !== 'countdown') return
