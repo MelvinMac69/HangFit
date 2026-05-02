@@ -2109,7 +2109,7 @@ export default function WorkoutPage() {
                     substitutions={exData?.substitutions}
                     onSwitchExercise={(_exIdx: number, newName: string) => handleSwitchExercise(thisIdx, newName)}
                     isTimeBased={exData?.isTimeBased}
-                    isEMOM={exData?.isEMOM}
+                    isEMOM={progExercise?.isEMOM}
                     isHIIT={progExercise?.isHIIT}
                     isAMRAP={progExercise?.isAMRAP}
                     hiitConfig={progExercise?.hiitConfig}
