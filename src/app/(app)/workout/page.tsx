@@ -41,64 +41,6 @@ import {
 
 
 
-// ============================================================
-// AUDIO — Web Audio API beeps (no audio files needed)
-// ============================================================
-function useAudioBeep() {
-  const audioCtxRef = React.useRef<globalThis.AudioContext | null>(null)
-  const initializedRef = React.useRef(false)
-  const [isReady, setIsReady] = React.useState(false)
-
-  const init = React.useCallback(() => {
-    if (initializedRef.current) return
-    try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
-      audioCtxRef.current = new AudioCtx()
-      // iOS Safari: AudioContext starts in 'suspended' state, needs resume() after user gesture
-      if (audioCtxRef.current.state === 'suspended') {
-        audioCtxRef.current.resume().then(() => {
-          initializedRef.current = true
-          setIsReady(true)
-        }).catch(() => { initializedRef.current = true; setIsReady(true) })
-      } else {
-        initializedRef.current = true
-        setIsReady(true)
-      }
-    } catch (e) {}
-  }, [])
-
-  const beep = React.useCallback((freq = 880, duration = 0.12, volume = 0.4) => {
-    if (!audioCtxRef.current) return
-    const ctx = audioCtxRef.current
-    // iOS Safari: resume if suspended before playing
-    if (ctx.state === 'suspended') { ctx.resume().catch(() => {}) }
-    try {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain); gain.connect(ctx.destination)
-      osc.frequency.value = freq; osc.type = 'sine'
-      gain.gain.setValueAtTime(volume, ctx.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration)
-      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + duration)
-    } catch (e) {}
-  }, [])
-
-  const tick = React.useCallback(() => { beep(660, 0.08, 0.3) }, [beep])
-  const workBeep = React.useCallback(() => { beep(880, 0.15, 0.5) }, [beep])
-  const restBeep = React.useCallback(() => { beep(440, 0.15, 0.4) }, [beep])
-  const doneBeep = React.useCallback(() => {
-    beep(1200, 0.1, 0.5)
-    setTimeout(() => beep(1200, 0.1, 0.5), 150)
-    setTimeout(() => beep(1200, 0.2, 0.6), 300)
-  }, [beep])
-  const countdownBeep = React.useCallback((val: number) => {
-    if (val === 3 || val === 2) beep(660, 0.1, 0.35)
-    if (val === 1) beep(1000, 0.15, 0.5)
-  }, [beep])
-
-  return { init, isReady, beep, tick, workBeep, restBeep, doneBeep, countdownBeep }
-}
-
 // Rest Timer Component
 function RestTimer({ 
   seconds, 
@@ -313,7 +255,7 @@ function WorkTimer({
 }
 
 // ============================================================
-// HIIT INTERVAL TIMER — true interval timer with phases, auto-transition, audio
+// HIIT INTERVAL TIMER — sprint / rest intervals
 // ============================================================
 function HIITTimer({
   warmupSeconds,
@@ -335,40 +277,14 @@ function HIITTimer({
   const [countdown, setCountdown] = React.useState(5)
   const [secondsLeft, setSecondsLeft] = React.useState(workSeconds)
   const [currentRound, setCurrentRound] = React.useState(0)
-  const [paused, setPaused] = React.useState(false)
-  const { init, isReady: audioReady, beep, workBeep, restBeep, doneBeep, countdownBeep } = useAudioBeep()
   const onDoneRef = React.useRef(onDone)
   React.useEffect(() => { onDoneRef.current = onDone }, [onDone])
-  const prevSecondsRef = React.useRef(secondsLeft)
 
-  const handleStart = () => { init(); setCountdown(5); setPhase('countdown') }
-
-  // Phase transition beeps — fire ONCE when phase changes
-  const prevPhaseRef = React.useRef(phase)
+  // Phase auto-transition logic
   React.useEffect(() => {
-    if (!audioReady) return
-    if (prevPhaseRef.current !== phase) {
-      if (phase === 'work') workBeep()
-      else if (phase === 'rest') restBeep()
-      else if (phase === 'done') doneBeep()
-      prevPhaseRef.current = phase
-    }
-  }, [phase, audioReady, workBeep, restBeep, doneBeep])
-
-  // 3-2-1 countdown beeps in final 3 seconds of each interval
-  React.useEffect(() => {
-    if (!audioReady) return
-    if ((phase === 'work' || phase === 'rest') && secondsLeft <= 3 && secondsLeft > 0) {
-      if (prevSecondsRef.current !== secondsLeft) countdownBeep(secondsLeft)
-    }
-    prevSecondsRef.current = secondsLeft
-  }, [secondsLeft, phase, audioReady, countdownBeep])
-
-  // Core timer — paused-aware
-  React.useEffect(() => {
-    if (paused) return
     if (phase === 'countdown') {
       if (countdown <= 0) {
+        // Start warmup or first work interval
         setSecondsLeft(warmupSeconds ?? 0)
         setCurrentRound(0)
         setPhase(warmupSeconds ? 'warmup' : 'work')
@@ -377,21 +293,26 @@ function HIITTimer({
       const id = setTimeout(() => setCountdown(c => c - 1), 1000)
       return () => clearTimeout(id)
     }
+
     if (phase === 'warmup' || phase === 'work' || phase === 'rest') {
       if (secondsLeft <= 1) {
         if (phase === 'warmup') {
+          // Transition to first work interval
           setSecondsLeft(workSeconds)
           setCurrentRound(1)
           setPhase('work')
         } else if (phase === 'work') {
           if (currentRound >= rounds) {
+            // All rounds complete
             setPhase('done')
             onDoneRef.current()
           } else {
+            // Transition to rest
             setSecondsLeft(restSeconds)
             setPhase('rest')
           }
         } else if (phase === 'rest') {
+          // Transition to next work interval
           setSecondsLeft(workSeconds)
           setCurrentRound(r => r + 1)
           setPhase('work')
@@ -401,100 +322,84 @@ function HIITTimer({
       const id = setTimeout(() => setSecondsLeft(s => s - 1), 1000)
       return () => clearTimeout(id)
     }
-  }, [phase, countdown, secondsLeft, rounds, workSeconds, restSeconds, warmupSeconds, paused])
+  }, [phase, countdown, secondsLeft, rounds, workSeconds, restSeconds, warmupSeconds])
 
   const isWork = phase === 'work'
   const isRest = phase === 'rest'
   const isWarmup = phase === 'warmup'
   const totalInterval = isWork ? workSeconds : restSeconds
   const progress = totalInterval > 0 ? ((totalInterval - secondsLeft) / totalInterval) * 100 : 0
+
   const phaseColor = isWork ? 'text-red-400' : isRest ? 'text-emerald-400' : isWarmup ? 'text-yellow-400' : 'text-orange-400'
-  const barColor = isWork ? 'bg-red-500' : isRest ? 'bg-emerald-500' : 'bg-yellow-500'
   const bgColor = isWork ? 'bg-red-500/20 border-red-500/50' : isRest ? 'bg-emerald-500/20 border-emerald-500/50' : isWarmup ? 'bg-yellow-500/20 border-yellow-500/50' : 'bg-orange-500/20 border-orange-500/50'
 
-  // ── Idle: block info + Start
+  if (phase === 'countdown') {
+    return (
+      <div className={`flex flex-col items-center justify-center p-6 rounded-xl border-2 ${bgColor}`}>
+        <span className="text-7xl font-bold text-orange-400 font-mono leading-none">{countdown}</span>
+        <span className="text-sm text-orange-300 mt-2">Get ready — HIIT Sprint Block</span>
+      </div>
+    )
+  }
+
   if (phase === 'idle') {
     return (
       <div className={`rounded-xl border-2 ${bgColor} p-4`}>
         <div className="text-center mb-3">
           <p className="text-orange-400 font-bold text-sm uppercase tracking-wide">{label || 'HIIT Sprints'}</p>
-          <p className="text-xs text-orange-300 mt-1">
-            {warmupSeconds ? `${warmupSeconds / 60}min warmup · ` : ''}{rounds} rounds × {workSeconds}s sprint / {restSeconds}s recovery
-          </p>
+          <p className="text-xs text-orange-300 mt-1">{rounds} rounds × {workSeconds}s work / {restSeconds}s rest{warmupSeconds ? ` · ${warmupSeconds / 60} min warm-up` : ''}</p>
         </div>
-        <button onClick={handleStart} className="w-full py-3 rounded-xl bg-orange-500/30 border border-orange-500/60 text-orange-400 font-bold text-sm hover:bg-orange-500/40 transition-colors flex items-center justify-center gap-2">
-          🔊 ⏱ START — HIIT
+        <button
+          onClick={() => { setCountdown(5); setPhase('countdown') }}
+          className="w-full py-3 rounded-xl bg-orange-500/30 border border-orange-500/60 text-orange-400 font-bold text-sm hover:bg-orange-500/40 transition-colors"
+        >
+          ⏱ START — HIIT
         </button>
-        <div className="flex gap-2 mt-2">
-          <button
-            onClick={() => { init(); setTimeout(() => { beep(880, 0.15, 0.5); setTimeout(() => beep(440, 0.15, 0.4), 200) }, 50) }}
-            className="flex-1 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-muted-foreground hover:bg-white/10 transition-colors"
-          >
-            🔊 Test Sound
-          </button>
-        </div>
       </div>
     )
   }
 
-  // ── Countdown before start
-  if (phase === 'countdown') {
-    return (
-      <div className={`flex flex-col items-center justify-center p-8 rounded-xl border-2 ${bgColor}`}>
-        <span className="text-8xl font-bold text-orange-400 font-mono leading-none">{countdown}</span>
-        <span className="text-sm text-orange-300 mt-3">Get ready — {label || 'HIIT Sprints'}</span>
-        {audioReady && <span className="text-[10px] text-orange-400/60 mt-1">🔊 sound on</span>}
-      </div>
-    )
-  }
-
-  // ── Done
   if (phase === 'done') {
     return (
-      <div className="flex flex-col items-center justify-center p-8 rounded-xl bg-emerald-500/20 border-2 border-emerald-500/50">
-        <span className="text-5xl mb-3">🏁</span>
-        <span className="text-emerald-400 font-bold text-lg">Block Complete!</span>
-        <span className="text-emerald-300 text-sm mt-1">{rounds} rounds · {rounds * workSeconds}s total work</span>
-        <button onClick={() => { setPhase('idle'); setSecondsLeft(workSeconds); setCurrentRound(0); setPaused(false) }} className="mt-4 px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/30 transition-colors">
-          Reset
-        </button>
+      <div className="flex flex-col items-center justify-center p-6 rounded-xl bg-emerald-500/20 border-2 border-emerald-500/50">
+        <span className="text-4xl mb-2">✅</span>
+        <span className="text-emerald-400 font-bold">Block Complete!</span>
+        <span className="text-xs text-emerald-300 mt-1">{rounds} rounds done</span>
       </div>
     )
   }
-
-  // ── Active / paused timer
-  const phaseLabel = isWarmup ? '⏱ Warm-up' : isWork ? '🔥 Sprint' : '😮‍💨 Recovery'
-  const roundLabel = isWarmup ? `${warmupSeconds}s remaining` : `Round ${currentRound} of ${rounds}`
-  const overallProgress = isWarmup ? 0 : Math.min(100, Math.max(0, ((currentRound - (isRest ? 0 : 1) + (isRest ? 0 : (1 - secondsLeft / workSeconds))) / rounds) * 100))
 
   return (
     <div className={`rounded-xl border-2 ${bgColor} p-4`}>
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-3">
         <div>
-          <p className={`text-xs font-bold uppercase tracking-wide ${phaseColor}`}>{phaseLabel}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">{roundLabel}</p>
+          <p className={`text-xs font-bold uppercase tracking-wide ${phaseColor}`}>
+            {isWarmup ? '⏱ Warm-up' : isWork ? '🔥 Sprint' : '😮‍💨 Rest'}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {isWarmup ? `${warmupSeconds}s easy` : `Round ${currentRound} / ${rounds}`}
+          </p>
         </div>
         <div className="text-right">
-          <span className={`text-4xl font-bold font-mono ${phaseColor}`}>{secondsLeft}</span>
-          <span className="text-xs text-muted-foreground ml-1">sec</span>
+          <span className={`text-3xl font-bold font-mono ${phaseColor}`}>
+            {secondsLeft}s
+          </span>
         </div>
       </div>
-      <div className="h-4 bg-white/10 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full transition-all duration-300 ${barColor}`} style={{ width: `${progress}%` }} />
+      {/* Progress bar */}
+      <div className="h-3 bg-white/10 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-1000 ${isWork ? 'bg-red-500' : isRest ? 'bg-emerald-500' : 'bg-yellow-500'}`}
+          style={{ width: `${progress}%` }}
+        />
       </div>
-      <div className="flex items-center justify-between mt-1.5">
-        <span className="text-[10px] text-muted-foreground">Overall</span>
-        <div className="w-24 h-1.5 bg-white/10 rounded-full overflow-hidden">
-          <div className="h-full bg-white/40 rounded-full transition-all duration-300" style={{ width: `${Math.min(100, Math.max(0, overallProgress))}%` }} />
-        </div>
-        <span className="text-[10px] text-muted-foreground">{Math.round(Math.min(100, Math.max(0, overallProgress)))}%</span>
-      </div>
+      {/* Controls */}
       <div className="flex gap-2 mt-3">
-        <button onClick={() => setPaused(p => !p)} className="flex-1 py-2.5 rounded-lg bg-white/10 text-sm font-semibold hover:bg-white/20 transition-colors flex items-center justify-center gap-1.5">
-          {paused ? '▶ Resume' : '⏸ Pause'}
-        </button>
-        <button onClick={() => { setPhase('done'); onDoneRef.current() }} className="flex-1 py-2.5 rounded-lg bg-white/10 text-sm font-semibold hover:bg-white/20 transition-colors">
-          End Block
+        <button
+          onClick={() => { setPhase('done'); onDoneRef.current() }}
+          className="flex-1 py-2 rounded-lg bg-white/10 text-xs font-semibold hover:bg-white/20 transition-colors"
+        >
+          Skip Block
         </button>
       </div>
     </div>
@@ -502,7 +407,7 @@ function HIITTimer({
 }
 
 // ============================================================
-// AMRAP TIMER — rounds-based circuit timer with audio
+// AMRAP TIMER — rounds-based circuit timer
 // ============================================================
 function AMRAPTimer({
   totalMinutes,
@@ -517,50 +422,40 @@ function AMRAPTimer({
   const [countdown, setCountdown] = React.useState(5)
   const [totalSecondsLeft, setTotalSecondsLeft] = React.useState(totalMinutes * 60)
   const [roundsCompleted, setRoundsCompleted] = React.useState(0)
-  const [paused, setPaused] = React.useState(false)
-  const { init, isReady: audioReady, doneBeep, countdownBeep } = useAudioBeep()
   const onDoneRef = React.useRef(onDone)
-  const prevSecondsRef = React.useRef(totalSecondsLeft)
   React.useEffect(() => { onDoneRef.current = onDone }, [onDone])
 
-  const handleStart = () => { init(); setCountdown(5); setPhase('countdown') }
-
   React.useEffect(() => {
-    if (!audioReady) return
-    if (phase === 'done') doneBeep()
-  }, [phase, audioReady, doneBeep])
-
-  React.useEffect(() => {
-    if (!audioReady || phase !== 'running') return
-    if (totalSecondsLeft <= 10 && totalSecondsLeft > 0 && totalSecondsLeft !== prevSecondsRef.current) countdownBeep(totalSecondsLeft)
-    prevSecondsRef.current = totalSecondsLeft
-  }, [totalSecondsLeft, phase, audioReady, countdownBeep])
-
-  React.useEffect(() => {
-    if (paused) return
     if (phase === 'countdown') {
-      if (countdown <= 0) { setPhase('running'); setTotalSecondsLeft(totalMinutes * 60); return }
+      if (countdown <= 0) {
+        setPhase('running')
+        setTotalSecondsLeft(totalMinutes * 60)
+        return
+      }
       const id = setTimeout(() => setCountdown(c => c - 1), 1000)
       return () => clearTimeout(id)
     }
+
     if (phase !== 'running') return
     const endTime = Date.now() + totalSecondsLeft * 1000
     const tick = () => {
       const left = Math.max(0, Math.ceil((endTime - Date.now()) / 1000))
       setTotalSecondsLeft(left)
-      if (left <= 0) { setPhase('done'); onDoneRef.current() }
+      if (left <= 0) {
+        setPhase('done')
+        onDoneRef.current()
+      }
     }
     tick()
     const id = setInterval(tick, 100)
     return () => clearInterval(id)
-  }, [phase, countdown, totalSecondsLeft, totalMinutes, paused])
+  }, [phase, countdown, totalSecondsLeft, totalMinutes])
 
   if (phase === 'countdown') {
     return (
       <div className="flex flex-col items-center justify-center p-6 rounded-xl bg-orange-500/20 border-2 border-orange-500/50">
         <span className="text-7xl font-bold text-orange-400 font-mono leading-none">{countdown}</span>
         <span className="text-sm text-orange-300 mt-2">Get ready — {totalMinutes} min AMRAP</span>
-        {audioReady && <span className="text-[10px] text-orange-400/60 mt-1">🔊 sound on</span>}
       </div>
     )
   }
@@ -573,13 +468,18 @@ function AMRAPTimer({
           <div className="space-y-1">
             {circuit.map((item, i) => (
               <p key={i} className="text-xs text-orange-200 text-center">
-                {item.reps && `${item.reps} `}{item.name}{item.distance && ` · ${item.distance}`}{item.calories && ` · ${item.calories}`}
+                {item.reps && `${item.reps} `}{item.name}
+                {item.distance && ` · ${item.distance}`}
+                {item.calories && ` · ${item.calories}`}
               </p>
             ))}
           </div>
         </div>
-        <button onClick={handleStart} className="w-full py-3 rounded-xl bg-orange-500/20 border-2 border-orange-500/40 text-orange-400 font-bold text-sm hover:bg-orange-500/30 transition-colors flex items-center justify-center gap-2">
-          🔊 ⏱ START — {totalMinutes} min AMRAP
+        <button
+          onClick={() => { setCountdown(5); setPhase('countdown') }}
+          className="w-full py-3 rounded-xl bg-orange-500/20 border-2 border-orange-500/40 text-orange-400 font-bold text-sm hover:bg-orange-500/30 transition-colors"
+        >
+          ⏱ START — {totalMinutes} min AMRAP
         </button>
       </div>
     )
@@ -588,11 +488,14 @@ function AMRAPTimer({
   if (phase === 'done') {
     return (
       <div className="flex flex-col items-center justify-center p-6 rounded-xl bg-emerald-500/20 border-2 border-emerald-500/50">
-        <span className="text-5xl mb-2">🏁</span>
+        <span className="text-4xl mb-2">✅</span>
         <span className="text-emerald-400 font-bold">Time!</span>
         <span className="text-emerald-300 text-sm mt-1">{roundsCompleted} rounds completed</span>
-        <button onClick={() => { setPhase('idle'); setTotalSecondsLeft(totalMinutes * 60); setRoundsCompleted(0); setPaused(false) }} className="mt-3 px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/30 transition-colors">
-          Reset
+        <button
+          onClick={() => { setPhase('done'); onDoneRef.current() }}
+          className="mt-3 px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-semibold"
+        >
+          Mark Done
         </button>
       </div>
     )
@@ -600,44 +503,60 @@ function AMRAPTimer({
 
   const mins = Math.floor(totalSecondsLeft / 60)
   const secs = totalSecondsLeft % 60
-  const overallProgress = ((totalMinutes * 60 - totalSecondsLeft) / (totalMinutes * 60)) * 100
 
   return (
     <div className="rounded-xl bg-orange-500/10 border-2 border-orange-500/40 p-4 space-y-3">
+      {/* Timer display */}
       <div className="text-center">
-        <span className="text-5xl font-bold text-orange-400 font-mono">{mins}:{secs.toString().padStart(2, '0')}</span>
-        <p className="text-xs text-orange-300 mt-1">{totalMinutes} min AMRAP</p>
+        <span className="text-5xl font-bold text-orange-400 font-mono">
+          {mins}:{secs.toString().padStart(2, '0')}
+        </span>
+        <p className="text-xs text-orange-300 mt-1">{totalMinutes} min AMRAP — tap rounds when complete</p>
       </div>
-      <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-        <div className="h-full bg-orange-500 rounded-full transition-all duration-300" style={{ width: `${overallProgress}%` }} />
-      </div>
+
+      {/* Round counter */}
       <div className="flex items-center justify-center gap-3">
-        <button onClick={() => setRoundsCompleted(r => Math.max(0, r - 1))} className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-lg font-bold">−</button>
+        <button
+          onClick={() => setRoundsCompleted(r => Math.max(0, r - 1))}
+          className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-lg font-bold"
+        >
+          −
+        </button>
         <div className="text-center">
           <span className="text-3xl font-bold text-white">{roundsCompleted}</span>
           <p className="text-xs text-muted-foreground">rounds</p>
         </div>
-        <button onClick={() => setRoundsCompleted(r => r + 1)} className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-lg font-bold">+</button>
+        <button
+          onClick={() => setRoundsCompleted(r => r + 1)}
+          className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-lg font-bold"
+        >
+          +
+        </button>
       </div>
+
+      {/* Circuit movements */}
       <div className="space-y-1">
         {circuit.map((item, i) => (
-          <p key={i} className="text-xs text-orange-200 text-center">{item.reps && `${item.reps} `}{item.name}{item.distance && ` · ${item.distance}`}</p>
+          <p key={i} className="text-xs text-orange-200 text-center">
+            {item.reps && `${item.reps} `}{item.name}
+            {item.distance && ` · ${item.distance}`}
+          </p>
         ))}
       </div>
-      <div className="flex gap-2">
-        <button onClick={() => setPaused(p => !p)} className="flex-1 py-2 rounded-lg bg-white/10 text-sm font-semibold hover:bg-white/20 transition-colors flex items-center justify-center gap-1.5">
-          {paused ? '▶ Resume' : '⏸ Pause'}
-        </button>
-        <button onClick={() => { setPhase('done'); onDoneRef.current() }} className="flex-1 py-2 rounded-lg bg-white/10 text-sm font-semibold hover:bg-white/20 transition-colors">
-          Finish Early
-        </button>
-      </div>
+
+      {/* Done button */}
+      <button
+        onClick={() => { setPhase('done'); onDoneRef.current() }}
+        className="w-full py-2 rounded-lg bg-emerald-500/20 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/30 transition-colors"
+      >
+        Finish Early
+      </button>
     </div>
   )
 }
 
 // ============================================================
-// EMOM TIMER — circular SVG progress + round counter with audio
+// EMOM TIMER — circular SVG progress + round counter
 // ============================================================
 function EMOMTimer({
   totalMinutes,
@@ -653,36 +572,23 @@ function EMOMTimer({
   const [secondsLeft, setSecondsLeft] = React.useState(59)
   const [totalSecondsLeft, setTotalSecondsLeft] = React.useState(totalMinutes * 60)
   const [currentRound, setCurrentRound] = React.useState(1)
-  const [paused, setPaused] = React.useState(false)
-  const { init, isReady: audioReady, workBeep, doneBeep, countdownBeep } = useAudioBeep()
   const onDoneRef = React.useRef(onDone)
-  const prevSecondsRef = React.useRef(secondsLeft)
   React.useEffect(() => { onDoneRef.current = onDone }, [onDone])
 
-  const handleStart = () => { init(); setCountdown(5); setPhase('countdown') }
-
-  // Minute change beep
   React.useEffect(() => {
-    if (!audioReady) return
-    if (phase === 'running' && prevSecondsRef.current === 1 && secondsLeft === 59) workBeep()
-    if (phase === 'done') doneBeep()
-    prevSecondsRef.current = secondsLeft
-  }, [phase, secondsLeft, audioReady, workBeep, doneBeep])
-
-  // 3-2-1 countdown
-  React.useEffect(() => {
-    if (!audioReady) return
-    if (phase === 'running' && secondsLeft <= 3 && secondsLeft > 0 && prevSecondsRef.current !== secondsLeft) countdownBeep(secondsLeft)
-    prevSecondsRef.current = secondsLeft
-  }, [secondsLeft, phase, audioReady, countdownBeep])
-
-  React.useEffect(() => {
-    if (paused) return
-    if (phase === 'countdown') {
-      if (countdown <= 0) { setPhase('running'); setSecondsLeft(59); setTotalSecondsLeft(totalMinutes * 60); setCurrentRound(1); return }
-      const id = setTimeout(() => setCountdown(c => c - 1), 1000)
-      return () => clearTimeout(id)
+    if (phase !== 'countdown') return
+    if (countdown <= 0) {
+      setPhase('running')
+      setSecondsLeft(59)
+      setTotalSecondsLeft(totalMinutes * 60)
+      setCurrentRound(1)
+      return
     }
+    const id = setTimeout(() => setCountdown(c => c - 1), 1000)
+    return () => clearTimeout(id)
+  }, [phase, countdown, totalMinutes])
+
+  React.useEffect(() => {
     if (phase !== 'running') return
     const endTime = Date.now() + totalSecondsLeft * 1000
     const tick = () => {
@@ -693,12 +599,15 @@ function EMOMTimer({
       const elapsed = totalMinutes * 60 - left
       const round = Math.min(Math.floor(elapsed / 60) + 1, totalMinutes)
       setCurrentRound(round)
-      if (left <= 0) { setPhase('done'); onDoneRef.current() }
+      if (left <= 0) {
+        setPhase('done')
+        onDoneRef.current()
+      }
     }
     tick()
     const id = setInterval(tick, 100)
     return () => clearInterval(id)
-  }, [phase, totalMinutes, paused])
+  }, [phase, totalMinutes])
 
   const R = 52
   const circ = 2 * Math.PI * R
@@ -710,7 +619,6 @@ function EMOMTimer({
       <div className="flex flex-col items-center justify-center p-6 rounded-xl bg-orange-500/20 border-2 border-orange-500/50">
         <span className="text-7xl font-bold text-orange-400 font-mono leading-none">{countdown}</span>
         <span className="text-sm text-orange-300 mt-2">Get ready — {totalMinutes} min EMOM</span>
-        {audioReady && <span className="text-[10px] text-orange-400/60 mt-1">🔊 sound on</span>}
       </div>
     )
   }
@@ -718,22 +626,16 @@ function EMOMTimer({
   if (phase === 'idle') {
     return (
       <div className="space-y-2">
-        {minuteLabel && <div className="rounded-lg bg-orange-500/10 p-2"><p className="text-xs text-orange-300 text-center whitespace-pre-line">{minuteLabel}</p></div>}
-        <button onClick={handleStart} className="w-full py-3 rounded-xl bg-orange-500/20 border-2 border-orange-500/40 text-orange-400 text-center text-sm font-bold hover:bg-orange-500/30 transition-colors flex items-center justify-center gap-2">
-          🔊 ⏱ START — {totalMinutes}-min EMOM
-        </button>
-      </div>
-    )
-  }
-
-  if (phase === 'done') {
-    return (
-      <div className="flex flex-col items-center justify-center p-6 rounded-xl bg-emerald-500/20 border-2 border-emerald-500/50">
-        <span className="text-5xl mb-2">🏁</span>
-        <span className="text-emerald-400 font-bold">{totalMinutes} min Complete!</span>
-        <span className="text-emerald-300 text-sm mt-1">{currentRound} rounds</span>
-        <button onClick={() => { setPhase('idle'); setTotalSecondsLeft(totalMinutes * 60); setCurrentRound(1); setPaused(false) }} className="mt-3 px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/30 transition-colors">
-          Reset
+        {minuteLabel && (
+          <div className="rounded-lg bg-orange-500/10 p-2">
+            <p className="text-xs text-orange-300 text-center whitespace-pre-line">{minuteLabel}</p>
+          </div>
+        )}
+        <button
+          onClick={() => { setCountdown(5); setPhase('countdown') }}
+          className="w-full py-3 rounded-xl bg-orange-500/20 border-2 border-orange-500/40 text-orange-400 text-center text-sm font-bold hover:bg-orange-500/30 transition-colors"
+        >
+          ⏱ START — {totalMinutes}-min EMOM
         </button>
       </div>
     )
@@ -744,23 +646,23 @@ function EMOMTimer({
       <div className="relative w-32 h-32">
         <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
           <circle cx="60" cy="60" r={R} fill="none" stroke="rgba(249,115,22,0.15)" strokeWidth="10" />
-          <circle cx="60" cy="60" r={R} fill="none" stroke="#f97316" strokeWidth="10" strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={dashOffset} style={{ transition: 'stroke-dashoffset 0.08s linear' }} />
+          <circle
+            cx="60" cy="60" r={R} fill="none" stroke="#f97316" strokeWidth="10"
+            strokeLinecap="round" strokeDasharray={circ}
+            strokeDashoffset={dashOffset}
+            style={{ transition: 'stroke-dashoffset 0.08s linear' }}
+          />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-3xl font-bold text-white leading-none">{currentRound}</span>
           <span className="text-xs text-orange-400">/ {totalMinutes}</span>
         </div>
       </div>
-      <span className="text-3xl font-bold text-orange-400 font-mono">{Math.floor(totalSecondsLeft / 60)}:{(totalSecondsLeft % 60).toString().padStart(2, '0')}</span>
-      <div className="text-xs text-muted-foreground text-center">{totalSecondsLeft > 60 ? `${Math.ceil(totalSecondsLeft / 60) - 1} min remaining` : 'Final minute!'}</div>
-      {minuteLabel && <div className="rounded-lg bg-orange-500/10 p-2 max-w-xs"><p className="text-xs text-orange-300 text-center whitespace-pre-line">{minuteLabel}</p></div>}
-      <div className="flex gap-2 mt-2">
-        <button onClick={() => setPaused(p => !p)} className="px-4 py-2 rounded-lg bg-white/10 text-sm font-semibold hover:bg-white/20 transition-colors flex items-center gap-1.5">
-          {paused ? '▶ Resume' : '⏸ Pause'}
-        </button>
-        <button onClick={() => { setPhase('done'); onDoneRef.current() }} className="px-4 py-2 rounded-lg bg-white/10 text-sm font-semibold hover:bg-white/20 transition-colors">
-          End Block
-        </button>
+      <span className="text-3xl font-bold text-orange-400 font-mono">
+        {Math.floor(totalSecondsLeft / 60)}:{(totalSecondsLeft % 60).toString().padStart(2, '0')}
+      </span>
+      <div className="text-xs text-muted-foreground text-center">
+        {totalSecondsLeft > 60 ? `${Math.ceil(totalSecondsLeft / 60) - 1} min remaining` : 'Final minute!'}
       </div>
     </div>
   )
@@ -967,35 +869,26 @@ function ExerciseCard({
           {cue && (
             <p className="text-xs text-orange-400 mt-1 leading-snug">{cue}</p>
           )}
-          {/* Interval/timer block info — shown in collapsed header instead of set metadata */}
-          {isHIIT && hiitConfig && (
-            <div className="flex items-center gap-3 mt-1 text-xs text-orange-400">
-              <span>⏱ HIIT</span>
-              <span>{hiitConfig.rounds} rounds</span>
-              <span>{hiitConfig.workSeconds}s/{hiitConfig.restSeconds}s</span>
-              {hiitConfig.warmupSeconds && <span>+{hiitConfig.warmupSeconds / 60 | 0}min warmup</span>}
-            </div>
-          )}
-          {isEMOM && emomConfig && (
-            <div className="flex items-center gap-3 mt-1 text-xs text-orange-400">
-              <span>⏱ EMOM</span>
-              <span>{emomConfig.totalMinutes} min</span>
-              {emomConfig.minuteLabel && <span className="text-orange-300 truncate max-w-xs">{emomConfig.minuteLabel.split('|')[0].trim()}</span>}
-            </div>
-          )}
-          {isAMRAP && amrapConfig && (
-            <div className="flex items-center gap-3 mt-1 text-xs text-orange-400">
-              <span>⏱ AMRAP</span>
-              <span>{amrapConfig.totalMinutes} min</span>
-              <span>{amrapConfig.circuit.length} exercises</span>
-            </div>
-          )}
-          {/* Standard set metadata — hidden for interval blocks */}
-          {!isHIIT && !isAMRAP && !isEMOM && (
+          {!(isHIIT || isAMRAP || isEMOM) && (
             <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
               <span>{completedSets}/{sets.length} sets</span>
               {totalVolume > 0 && <span>{(totalVolume / 1000).toFixed(1)}k lbs</span>}
               <span className="text-white/30">Rest 90s</span>
+            </div>
+          )}
+          {isHIIT && hiitConfig && (
+            <div className="flex items-center gap-2 mt-1 text-xs text-orange-400">
+              <span>⏱ HIIT {hiitConfig.rounds} rounds · {hiitConfig.workSeconds}s/{hiitConfig.restSeconds}s</span>
+            </div>
+          )}
+          {isEMOM && emomConfig && (
+            <div className="flex items-center gap-2 mt-1 text-xs text-emerald-400">
+              <span>⏱ EMOM {emomConfig.totalMinutes ?? 10} min</span>
+            </div>
+          )}
+          {isAMRAP && amrapConfig && (
+            <div className="flex items-center gap-2 mt-1 text-xs text-cyan-400">
+              <span>⏱ AMRAP {amrapConfig.totalMinutes} min</span>
             </div>
           )}
         </div>
@@ -1187,7 +1080,7 @@ function ExerciseCard({
               )}
             </div>
           ))}
-          {!(isHIIT || isAMRAP || isEMOM) && (
+          {!isHIIT && !isAMRAP && !isEMOM && (
             <button
               onClick={() => {
                 const newSet: LocalSet = { id: genId(), weight: 0, reps: 0, completed: false }
@@ -1197,7 +1090,7 @@ function ExerciseCard({
             >
               <Plus className="w-4 h-4" /> Add Set
             </button>
-          )
+          )}
         </div>
       )}
     </div>
