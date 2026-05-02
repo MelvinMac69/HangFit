@@ -357,7 +357,7 @@ function HIITTimer({
   // Countdown beeps in final 3 seconds of each interval
   React.useEffect(() => {
     if (!audioReady) return
-    if ((phase === 'work' || phase === 'rest') && secondsLeft <= 3 && secondsLeft > 0) {
+    if ((phase === 'work' || phase === 'rest' || phase === 'countdown') && secondsLeft <= 3 && secondsLeft > 0) {
       if (prevSecondsRef.current !== secondsLeft) countdownBeep(secondsLeft)
     }
     prevSecondsRef.current = secondsLeft

@@ -216,7 +216,7 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
         isEMOM: true,
         emomConfig: {
           totalMinutes: 10,
-          minuteLabel: 'Min 1: 15–20 KB Swings | Min 2: Fan Bike / Ski Erg hard'
+          minuteLabel: 'Every minute: 20 KB Swings OR 14 Ball Slams'
         }
       },
     ],
