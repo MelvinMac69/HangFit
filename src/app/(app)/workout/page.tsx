@@ -9,6 +9,63 @@ import { EXERCISES } from '@/lib/program-data'
 import { PHASE_LABELS, PHASE_COLORS } from '@/types/workout'
 import type { PhaseKey } from '@/types/workout'
 
+// ============================================================
+// WEB AUDIO API — interval timer beeps (no audio files)
+// ============================================================
+function useAudioBeep() {
+  const audioCtxRef = React.useRef<globalThis.AudioContext | null>(null)
+  const initializedRef = React.useRef(false)
+  const [isReady, setIsReady] = React.useState(false)
+
+  const init = React.useCallback(() => {
+    if (initializedRef.current) return
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+      audioCtxRef.current = new AudioCtx()
+      if (audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume().then(() => {
+          initializedRef.current = true
+          setIsReady(true)
+        }).catch(() => { initializedRef.current = true; setIsReady(true) })
+      } else {
+        initializedRef.current = true
+        setIsReady(true)
+      }
+    } catch (e) {}
+  }, [])
+
+  const beep = React.useCallback((freq = 880, duration = 0.12, volume = 0.4) => {
+    if (!audioCtxRef.current) return
+    const ctx = audioCtxRef.current
+    if (ctx.state === 'suspended') { ctx.resume().catch(() => {}) }
+    try {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain); gain.connect(ctx.destination)
+      osc.frequency.value = freq; osc.type = 'sine'
+      gain.gain.setValueAtTime(volume, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration)
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + duration)
+    } catch (e) {}
+  }, [])
+
+  const doneBeep = React.useCallback(() => {
+    beep(660, 0.1, 0.5)
+    setTimeout(() => beep(880, 0.1, 0.5), 150)
+    setTimeout(() => beep(1200, 0.2, 0.6), 300)
+  }, [beep])
+
+  const countdownBeep = React.useCallback((val: number) => {
+    if (val === 3 || val === 2) beep(660, 0.1, 0.35)
+    if (val === 1) beep(1000, 0.15, 0.5)
+  }, [beep])
+
+  const workBeep = React.useCallback(() => { beep(880, 0.15, 0.5) }, [beep])
+  const restBeep = React.useCallback(() => { beep(440, 0.15, 0.4) }, [beep])
+
+  return { init, isReady, beep, doneBeep, countdownBeep, workBeep, restBeep }
+}
+
 // Local types for workout session (simpler than DB types)
 interface LocalSet {
   id: string
@@ -277,8 +334,34 @@ function HIITTimer({
   const [countdown, setCountdown] = React.useState(5)
   const [secondsLeft, setSecondsLeft] = React.useState(workSeconds)
   const [currentRound, setCurrentRound] = React.useState(0)
+  const [paused, setPaused] = React.useState(false)
+  const { init, isReady: audioReady, workBeep, restBeep, doneBeep, countdownBeep } = useAudioBeep()
+  const prevPhaseRef = React.useRef<Phase>(phase)
+  const prevSecondsRef = React.useRef(secondsLeft)
   const onDoneRef = React.useRef(onDone)
   React.useEffect(() => { onDoneRef.current = onDone }, [onDone])
+
+  const handleStart = () => { init(); setCountdown(5); setPhase('countdown') }
+
+  // Phase transition beeps — fire ONCE when phase changes
+  React.useEffect(() => {
+    if (!audioReady) return
+    if (prevPhaseRef.current !== phase) {
+      if (phase === 'work') workBeep()
+      else if (phase === 'rest') restBeep()
+      else if (phase === 'done') doneBeep()
+      prevPhaseRef.current = phase
+    }
+  }, [phase, audioReady, workBeep, restBeep, doneBeep])
+
+  // Countdown beeps in final 3 seconds of each interval
+  React.useEffect(() => {
+    if (!audioReady) return
+    if ((phase === 'work' || phase === 'rest') && secondsLeft <= 3 && secondsLeft > 0) {
+      if (prevSecondsRef.current !== secondsLeft) countdownBeep(secondsLeft)
+    }
+    prevSecondsRef.current = secondsLeft
+  }, [secondsLeft, phase, audioReady, countdownBeep])
 
   // Phase auto-transition logic
   React.useEffect(() => {
@@ -350,10 +433,16 @@ function HIITTimer({
           <p className="text-xs text-orange-300 mt-1">{rounds} rounds × {workSeconds}s work / {restSeconds}s rest{warmupSeconds ? ` · ${warmupSeconds / 60} min warm-up` : ''}</p>
         </div>
         <button
-          onClick={() => { setCountdown(5); setPhase('countdown') }}
+          onClick={handleStart}
           className="w-full py-3 rounded-xl bg-orange-500/30 border border-orange-500/60 text-orange-400 font-bold text-sm hover:bg-orange-500/40 transition-colors"
         >
           ⏱ START — HIIT
+        </button>
+        <button
+          onClick={() => { init(); doneBeep() }}
+          className="w-full py-2 rounded-xl bg-white/10 border border-white/20 text-orange-300 font-semibold text-xs hover:bg-white/15 transition-colors mt-2"
+        >
+          🔊 Test Sound
         </button>
       </div>
     )
@@ -422,8 +511,25 @@ function AMRAPTimer({
   const [countdown, setCountdown] = React.useState(5)
   const [totalSecondsLeft, setTotalSecondsLeft] = React.useState(totalMinutes * 60)
   const [roundsCompleted, setRoundsCompleted] = React.useState(0)
+  const { init, isReady: audioReady, doneBeep, countdownBeep } = useAudioBeep()
+  const prevCountdownRef = React.useRef(countdown)
   const onDoneRef = React.useRef(onDone)
   React.useEffect(() => { onDoneRef.current = onDone }, [onDone])
+
+  // Done beep
+  React.useEffect(() => {
+    if (!audioReady) return
+    if (phase === 'done') doneBeep()
+  }, [phase, audioReady, doneBeep])
+
+  // Countdown beeps
+  React.useEffect(() => {
+    if (!audioReady) return
+    if (phase === 'countdown' && countdown <= 3 && countdown > 0) {
+      if (prevCountdownRef.current !== countdown) countdownBeep(countdown)
+    }
+    prevCountdownRef.current = countdown
+  }, [countdown, phase, audioReady, countdownBeep])
 
   React.useEffect(() => {
     if (phase === 'countdown') {
@@ -476,10 +582,16 @@ function AMRAPTimer({
           </div>
         </div>
         <button
-          onClick={() => { setCountdown(5); setPhase('countdown') }}
+          onClick={() => { init(); setCountdown(5); setPhase('countdown') }}
           className="w-full py-3 rounded-xl bg-orange-500/20 border-2 border-orange-500/40 text-orange-400 font-bold text-sm hover:bg-orange-500/30 transition-colors"
         >
           ⏱ START — {totalMinutes} min AMRAP
+        </button>
+        <button
+          onClick={() => { init(); doneBeep() }}
+          className="w-full py-2 rounded-xl bg-white/10 border border-white/20 text-orange-300 font-semibold text-xs hover:bg-white/15 transition-colors mt-2"
+        >
+          🔊 Test Sound
         </button>
       </div>
     )
@@ -572,8 +684,25 @@ function EMOMTimer({
   const [secondsLeft, setSecondsLeft] = React.useState(59)
   const [totalSecondsLeft, setTotalSecondsLeft] = React.useState(totalMinutes * 60)
   const [currentRound, setCurrentRound] = React.useState(1)
+  const { init, isReady: audioReady, doneBeep, countdownBeep } = useAudioBeep()
+  const prevCountdownRef = React.useRef(countdown)
   const onDoneRef = React.useRef(onDone)
   React.useEffect(() => { onDoneRef.current = onDone }, [onDone])
+
+  // Done beep
+  React.useEffect(() => {
+    if (!audioReady) return
+    if (phase === 'done') doneBeep()
+  }, [phase, audioReady, doneBeep])
+
+  // Countdown beeps
+  React.useEffect(() => {
+    if (!audioReady) return
+    if (phase === 'countdown' && countdown <= 3 && countdown > 0) {
+      if (prevCountdownRef.current !== countdown) countdownBeep(countdown)
+    }
+    prevCountdownRef.current = countdown
+  }, [countdown, phase, audioReady, countdownBeep])
 
   React.useEffect(() => {
     if (phase !== 'countdown') return
@@ -632,10 +761,16 @@ function EMOMTimer({
           </div>
         )}
         <button
-          onClick={() => { setCountdown(5); setPhase('countdown') }}
+          onClick={() => { init(); setCountdown(5); setPhase('countdown') }}
           className="w-full py-3 rounded-xl bg-orange-500/20 border-2 border-orange-500/40 text-orange-400 text-center text-sm font-bold hover:bg-orange-500/30 transition-colors"
         >
           ⏱ START — {totalMinutes}-min EMOM
+        </button>
+        <button
+          onClick={() => { init(); doneBeep() }}
+          className="w-full py-2 rounded-xl bg-white/10 border border-white/20 text-orange-300 font-semibold text-xs hover:bg-white/15 transition-colors"
+        >
+          🔊 Test Sound
         </button>
       </div>
     )
