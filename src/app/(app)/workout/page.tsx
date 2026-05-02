@@ -331,16 +331,19 @@ function HIITTimer({
 
   const handleStart = () => { init(); setAudioReady(true); setCountdown(5); setPhase('countdown') }
 
-  // Phase transition beeps
+  // Phase transition beeps — fire ONCE when phase changes
+  const prevPhaseRef = React.useRef(phase)
   React.useEffect(() => {
     if (!audioReady) return
-    if (phase === 'work' && prevSecondsRef.current !== secondsLeft) workBeep()
-    if (phase === 'rest' && prevSecondsRef.current !== secondsLeft) restBeep()
-    if (phase === 'done') doneBeep()
-    prevSecondsRef.current = secondsLeft
-  }, [phase, secondsLeft, audioReady, workBeep, restBeep, doneBeep])
+    if (prevPhaseRef.current !== phase) {
+      if (phase === 'work') workBeep()
+      else if (phase === 'rest') restBeep()
+      else if (phase === 'done') doneBeep()
+      prevPhaseRef.current = phase
+    }
+  }, [phase, audioReady, workBeep, restBeep, doneBeep])
 
-  // 3-2-1 countdown beeps in final 3 seconds
+  // 3-2-1 countdown beeps in final 3 seconds of each interval
   React.useEffect(() => {
     if (!audioReady) return
     if ((phase === 'work' || phase === 'rest') && secondsLeft <= 3 && secondsLeft > 0) {
