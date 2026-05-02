@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hangfit-v5';
+const CACHE_NAME = 'hangfit-v6';
 const OFFLINE_URL = '/workout';
 
 self.addEventListener('install', (event) => {
