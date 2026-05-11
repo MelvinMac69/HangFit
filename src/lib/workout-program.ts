@@ -114,6 +114,7 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
       { id: 'zercher-squat', name: 'Zercher Squat', category: 'compound', customSets: 4, customReps: '5', supersetGroup: 'lower-a-ss2' },
       // Hypertrophy
       { id: 'ring-sissy-squat', name: 'Ring Sissy Squat', category: 'isolation', customSets: 2, customReps: '10' },
+      { id: 'weighted-box-step-up', name: 'Weighted Box Step Up', category: 'compound', customSets: 3, customReps: '8' },
       { id: 'side-plank-clamshell', name: 'Side Plank Clamshell', category: 'isolation', customSets: 2, customReps: '10' },
     ],
     mobilityBlock: LOWER_A_MOBILITY

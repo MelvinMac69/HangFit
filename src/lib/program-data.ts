@@ -363,6 +363,19 @@ export const EXERCISES: Record<string, Exercise> = {
       { name: 'Overhead Carry', why: 'Stability + movement' },
     ],
   },
+  'weighted-box-step-up': {
+    id: 'weighted-box-step-up',
+    name: 'Weighted Box Step Up',
+    category: 'compound',
+    cue: 'Drive through heel, fully lock out at top, control the descent — no jumping or bouncing',
+    youtubeUrl: 'https://www.youtube.com/watch?v=ZRRXToF2e5c',
+    substitutions: [
+      { name: 'Bulgarian Split Squat', why: 'More quad stretch, stationary foot' },
+      { name: 'Reverse Lunge', why: 'Less balance demand, no box needed' },
+      { name: 'Walking Lunge', why: 'Dynamic, athletic, no equipment' },
+      { name: 'Goblet Squat', why: 'Bilateral, no box required' },
+    ],
+  },
   'devils-press': {
     id: 'devils-press',
     name: "Devil's Press (DB)",
